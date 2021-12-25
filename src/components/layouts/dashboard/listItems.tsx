@@ -5,16 +5,17 @@ import ListItemText from "@mui/material/ListItemText";
 
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import TransactionsIcon from "@mui/icons-material/Assignment";
+import Link from "../../Link";
 
 export const mainListItems = (
   <div>
-    <ListItem button>
+    <ListItem button component={Link} href="/dashboard">
       <ListItemIcon>
         <DashboardIcon />
       </ListItemIcon>
       <ListItemText primary="Dashboard" />
     </ListItem>
-    <ListItem button>
+    <ListItem button component={Link} href="/transactions">
       <ListItemIcon>
         <TransactionsIcon />
       </ListItemIcon>
