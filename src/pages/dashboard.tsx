@@ -13,37 +13,21 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { blue, green, grey, red } from "@mui/material/colors";
 import React from "react";
+import { MyAppState } from "../types/my-app";
+import { getMonthName, MONTHS } from "../utils/helpers";
 
 const MyButton = styled(Button)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   color: theme.palette.text.primary,
 }));
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-const getCurrentMonth = () => {
-  const dt = new Date();
-  return dt.getMonth();
-};
-
-export default function DashboardPage() {
+export default function DashboardPage({
+  currentMonth,
+  setCurrentMonth,
+}: MyAppState) {
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(
     null
   );
-  const [currentMonth, setCurrentMonth] = React.useState(getCurrentMonth());
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -65,15 +49,12 @@ export default function DashboardPage() {
               <ChevronLeftIcon />
             </IconButton>
             <Box width={200}>
-              {/* <Paper sx={{ p: 1, textAlign: "center" }} elevation={0}>
-                <Typography>December, 2022</Typography>
-              </Paper> */}
               <MyButton
                 aria-describedby={id}
                 onClick={handleClick}
                 sx={{ width: "100%" }}
               >
-                {MONTHS[currentMonth]}, 2021
+                {getMonthName(currentMonth)}, 2021
               </MyButton>
               <Popover
                 id={id}
@@ -93,7 +74,7 @@ export default function DashboardPage() {
                     p: 1,
                   }}
                 >
-                  {MONTHS.map((text, i) => (
+                  {MONTHS.map(([text], i) => (
                     <Box key={i} sx={{ width: 120 }}>
                       <MyButton
                         sx={{

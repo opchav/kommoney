@@ -1,4 +1,3 @@
-import type { ChangeEventHandler, ReactElement } from "react";
 import Grid from "@mui/material/Grid";
 
 import { getLayout } from "../components/layouts/dashboard/Dashboard";
@@ -19,6 +18,8 @@ import { blue } from "@mui/material/colors";
 import React from "react";
 import TransactionsTable from "../components/transactions/TransactionsTable";
 import { Transaction } from "../types/transaction";
+import { MyAppState } from "../types/my-app";
+import { getMonthName, MONTHS } from "../utils/helpers";
 
 const MyButton = styled(Button)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
@@ -76,32 +77,14 @@ const rows = [
   createTransaction("Internet", 104.99, "expense", now, 1, "1", "1", ""),
 ];
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-const getCurrentMonth = () => {
-  const dt = new Date();
-  return dt.getMonth();
-};
-
-export default function TransactionsPage() {
+export default function TransactionsPage({
+  currentMonth,
+  setCurrentMonth,
+}: MyAppState) {
   const [transactions, setTransactions] = React.useState<Transaction[]>(rows);
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(
     null
   );
-  const [currentMonth, setCurrentMonth] = React.useState(getCurrentMonth());
   const [openModal, setOpenModal] = React.useState(false);
   const [form, setForm] = React.useState<Transaction>({} as Transaction);
 
@@ -138,15 +121,12 @@ export default function TransactionsPage() {
               <ChevronLeftIcon />
             </IconButton>
             <Box width={200}>
-              {/* <Paper sx={{ p: 1, textAlign: "center" }} elevation={0}>
-                <Typography>December, 2022</Typography>
-              </Paper> */}
               <MyButton
                 aria-describedby={id}
                 onClick={handleClick}
                 sx={{ width: "100%" }}
               >
-                {MONTHS[currentMonth]}, 2021
+                {getMonthName(currentMonth)}, 2021
               </MyButton>
               <Popover
                 id={id}
@@ -166,7 +146,7 @@ export default function TransactionsPage() {
                     p: 1,
                   }}
                 >
-                  {MONTHS.map((text, i) => (
+                  {MONTHS.map(([text], i) => (
                     <Box key={i} sx={{ width: 120 }}>
                       <MyButton
                         sx={{
