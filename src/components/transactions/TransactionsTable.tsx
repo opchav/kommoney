@@ -236,7 +236,7 @@ export default function TransactionsTable({ transactions }: TableProps) {
   const [orderBy, setOrderBy] = React.useState<keyof Transaction>("date");
   const [selected, setSelected] = React.useState<readonly string[]>([]);
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
   const handleRequestSort = (
     event: React.MouseEvent<unknown>,

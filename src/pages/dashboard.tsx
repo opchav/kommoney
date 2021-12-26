@@ -1,8 +1,15 @@
+import * as React from "react";
 import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 import { blue, green, red } from "@mui/material/colors";
 
 import ArrowCircleUpIcon from "@mui/icons-material/ArrowCircleUp";
@@ -12,6 +19,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import { MyAppState } from "../types/my-app";
 import { getLayout } from "../components/layouts/dashboard/Dashboard";
 import MonthSelector from "../components/MonthSelector";
+import { TransactionContext } from "../context/TransactionContext";
 
 // TODO `currentMonth` and `setCurrentMonth` are not used directly here neither on the transactions page component
 // those two can potentially be promoted to a context
@@ -121,7 +129,7 @@ export default function DashboardPage({
             sx={{ p: 2, display: "flex", flexDirection: "column" }}
             elevation={0}
           >
-            {/* TODO: render recent orders */}
+            <LatestTransactionsTable />
           </Paper>
         </Grid>
       </Grid>
@@ -130,3 +138,39 @@ export default function DashboardPage({
 }
 
 DashboardPage.getLayout = getLayout;
+
+function LatestTransactionsTable() {
+  const { transactions } = React.useContext(TransactionContext);
+
+  return (
+    <TableContainer component={Paper}>
+      <Table sx={{ minWidth: 650 }} aria-label="simple table">
+        <TableHead>
+          <TableRow>
+            <TableCell>Title</TableCell>
+            <TableCell align="right">Value</TableCell>
+            <TableCell align="right">Type</TableCell>
+            <TableCell align="right">Date</TableCell>
+            <TableCell align="right">Paid</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {transactions.slice(0, 5).map((row) => (
+            <TableRow
+              key={row.title}
+              sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+            >
+              <TableCell component="th" scope="row">
+                {row.title}
+              </TableCell>
+              <TableCell align="right">{row.value}</TableCell>
+              <TableCell align="right">{row.type}</TableCell>
+              <TableCell align="right">{row.date}</TableCell>
+              <TableCell align="right">{row.paid}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}

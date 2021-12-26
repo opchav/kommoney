@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
 
 import { Transaction } from "../types/transaction";
+import { TransactionContext } from "../context/TransactionContext";
 
 const ModalBox = styled(Box)(({ theme }) => ({
   position: "absolute",
@@ -19,10 +20,6 @@ const ModalBox = styled(Box)(({ theme }) => ({
   padding: theme.spacing(4),
 }));
 
-type TransactionFormProps = {
-  saveTransaction(transaction: Transaction): void;
-};
-
 const defaultTx: Transaction = {
   title: "",
   value: 10,
@@ -34,10 +31,9 @@ const defaultTx: Transaction = {
   note: "",
 };
 
-export default function TransactionForm({
-  saveTransaction,
-}: TransactionFormProps) {
+export default function TransactionForm() {
   const [open, setOpen] = React.useState(false);
+  const { setTransactions } = React.useContext(TransactionContext);
   const [transaction, setTransaction] = React.useState(defaultTx);
 
   const handleOpen = () => setOpen(true);
@@ -52,7 +48,7 @@ export default function TransactionForm({
   };
 
   const handleSubmit = () => {
-    saveTransaction(transaction);
+    setTransactions((previous) => [...previous, transaction]);
     setTransaction(defaultTx);
     handleClose();
   };
