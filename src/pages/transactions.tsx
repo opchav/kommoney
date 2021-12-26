@@ -9,6 +9,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { blue } from "@mui/material/colors";
 import React from "react";
+import TransactionsTable from "../components/transactions/TransactionsTable";
 
 const MyButton = styled(Button)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
@@ -109,6 +110,9 @@ export default function TransactionsPage() {
               <ChevronRightIcon />
             </IconButton>
           </Box>
+        </Grid>
+        <Grid item xs={12}>
+          <TransactionsTable />
         </Grid>
       </Grid>
     </>
