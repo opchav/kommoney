@@ -20,56 +20,7 @@ import Switch from "@mui/material/Switch";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { visuallyHidden } from "@mui/utils";
-
-interface Transaction {
-  title: string;
-  value: number;
-  type: "income" | "expense";
-  date: number;
-  paid: number;
-  category: string;
-  account: string;
-  note: string;
-}
-
-function createTransaction(
-  title: string,
-  value: number,
-  type: "income" | "expense",
-  date: number,
-  paid: number,
-  category: string,
-  account: string,
-  note: string
-): Transaction {
-  return {
-    title,
-    value,
-    type,
-    date,
-    paid,
-    category,
-    account,
-    note,
-  };
-}
-
-const now = new Date().getTime();
-const rows = [
-  createTransaction("Hamburger", 25, "expense", now, 1, "2", "1", ""),
-  createTransaction("Pizza", 50, "expense", now, 1, "1", "1", ""),
-  createTransaction("iPhone 13", 6999, "expense", now, 1, "1", "1", ""),
-  createTransaction("Rice 2kg", 19, "expense", now, 1, "1", "1", ""),
-  createTransaction("Nutella", 9, "expense", now, 1, "1", "1", ""),
-  createTransaction("Fralda RN 4kg", 29.99, "expense", now, 1, "1", "1", ""),
-  createTransaction("Picole", 7.9, "expense", now, 1, "1", "1", ""),
-  createTransaction("Pano de chao", 3.5, "expense", now, 1, "1", "1", ""),
-  createTransaction("Vestido", 200, "expense", now, 1, "1", "1", ""),
-  createTransaction("Combustivel", 199, "expense", now, 1, "1", "1", ""),
-  createTransaction("Energia eletrica", 508, "expense", now, 1, "1", "1", ""),
-  createTransaction("Condominio", 167, "expense", now, 1, "1", "1", ""),
-  createTransaction("Internet", 104.99, "expense", now, 1, "1", "1", ""),
-];
+import { Transaction } from "../../types/transaction";
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   if (b[orderBy] < a[orderBy]) {
@@ -94,23 +45,6 @@ function getComparator<Key extends keyof any>(
     ? (a, b) => descendingComparator(a, b, orderBy)
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
-
-// This method is created for cross-browser compatibility, if you don't
-// need to support IE11, you can use Array.prototype.sort() directly
-// function stableSort<T>(
-//   array: readonly T[],
-//   comparator: (a: T, b: T) => number
-// ) {
-//   const stabilizedThis = array.map((el, index) => [el, index] as [T, number]);
-//   stabilizedThis.sort((a, b) => {
-//     const order = comparator(a[0], b[0]);
-//     if (order !== 0) {
-//       return order;
-//     }
-//     return a[1] - b[1];
-//   });
-//   return stabilizedThis.map((el) => el[0]);
-// }
 
 interface HeadCell {
   disablePadding: boolean;
@@ -293,7 +227,11 @@ const EnhancedTableToolbar = (props: EnhancedTableToolbarProps) => {
   );
 };
 
-export default function TransactionsTable() {
+interface TableProps {
+  transactions: Transaction[];
+}
+
+export default function TransactionsTable({ transactions }: TableProps) {
   const [order, setOrder] = React.useState<Order>("asc");
   const [orderBy, setOrderBy] = React.useState<keyof Transaction>("date");
   const [selected, setSelected] = React.useState<readonly string[]>([]);
@@ -311,7 +249,7 @@ export default function TransactionsTable() {
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const newSelecteds = rows.map((n) => n.title);
+      const newSelecteds = transactions.map((n) => n.title);
       setSelected(newSelecteds);
       return;
     }
@@ -353,7 +291,7 @@ export default function TransactionsTable() {
 
   // Avoid a layout jump when reaching the last page with empty rows.
   const emptyRows =
-    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
+    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - transactions.length) : 0;
 
   return (
     <Box sx={{ width: "100%" }}>
@@ -371,10 +309,10 @@ export default function TransactionsTable() {
               orderBy={orderBy}
               onSelectAllClick={handleSelectAllClick}
               onRequestSort={handleRequestSort}
-              rowCount={rows.length}
+              rowCount={transactions.length}
             />
             <TableBody>
-              {rows
+              {transactions
                 .slice()
                 .sort(getComparator(order, orderBy))
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
@@ -434,7 +372,7 @@ export default function TransactionsTable() {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={rows.length}
+          count={transactions.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
