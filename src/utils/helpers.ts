@@ -29,3 +29,8 @@ export function getShortMonthName(index?: number): string {
   const monthIndex = index ?? new Date().getMonth();
   return MONTHS[monthIndex][1];
 }
+
+export function randomId() {
+  // https://stackoverflow.com/a/8084248
+  return (Math.random() + 1).toString(36).substring(2);
+}

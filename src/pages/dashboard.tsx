@@ -1,4 +1,3 @@
-import * as React from "react";
 import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -19,7 +18,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import { MyAppState } from "../types/my-app";
 import { getLayout } from "../components/layouts/dashboard/Dashboard";
 import MonthSelector from "../components/MonthSelector";
-import { TransactionContext } from "../context/TransactionContext";
+import { useTransactions } from "../context/TransactionContext";
 
 // TODO `currentMonth` and `setCurrentMonth` are not used directly here neither on the transactions page component
 // those two can potentially be promoted to a context
@@ -140,7 +139,7 @@ export default function DashboardPage({
 DashboardPage.getLayout = getLayout;
 
 function LatestTransactionsTable() {
-  const { transactions } = React.useContext(TransactionContext);
+  const transactions = useTransactions();
 
   return (
     <TableContainer component={Paper}>
