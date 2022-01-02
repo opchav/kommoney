@@ -7,14 +7,14 @@ import { SessionProvider } from 'next-auth/react';
 import theme from '../styles/theme';
 import createEmotionCache from '../utils/createEmotionCache';
 import { MyAppProps } from '../types/page';
-import { getMonth } from '../utils/helpers';
+import { getPeriod, Period } from '../utils/helpers';
 import { TransactionsProvider } from '../context/TransactionContext';
 
 // Client-side cache, shared for the whole session of the user in the browser.
 const clientSideEmotionCache = createEmotionCache();
 
 function MyApp(props: MyAppProps) {
-  const [currentMonth, setCurrentMonth] = React.useState(getMonth());
+  const [currentPeriod, setCurrentPeriod] = React.useState<Period>(getPeriod);
 
   const { Component, emotionCache = clientSideEmotionCache, pageProps } = props;
 
@@ -33,8 +33,8 @@ function MyApp(props: MyAppProps) {
           <TransactionsProvider>
             {getLayout(
               <Component
-                currentMonth={currentMonth}
-                setCurrentMonth={setCurrentMonth}
+                currentPeriod={currentPeriod}
+                setCurrentPeriod={setCurrentPeriod}
                 {...pageProps}
               />,
             )}

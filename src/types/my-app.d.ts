@@ -1,4 +1,6 @@
+import { Period } from '@/utils/helpers';
+
 export declare type MyAppState = {
-  currentMonth: number;
-  setCurrentMonth(month: number): void;
+  currentPeriod: Period;
+  setCurrentPeriod: React.Dispatch<React.SetStateAction<Period>>;
 };
