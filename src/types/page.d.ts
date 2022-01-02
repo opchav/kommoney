@@ -1,6 +1,7 @@
-import { NextPage } from "next";
-import { AppProps } from "next/app";
-import { ComponentType, ReactElement, ReactNode } from "react";
+import { Session } from 'next-auth';
+import { NextPage } from 'next';
+import { AppProps } from 'next/app';
+import { ComponentType, ReactElement, ReactNode } from 'react';
 
 export type Page<P = {}> = NextPage<P> & {
   // You can disable whichever you don't need
@@ -11,4 +12,5 @@ export type Page<P = {}> = NextPage<P> & {
 export type MyAppProps<P = {}> = AppProps<P> & {
   Component: Page;
   emotionCache?: EmotionCache;
+  session: Session;
 };
