@@ -1,4 +1,3 @@
-import * as React from 'react';
 import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
@@ -6,32 +5,28 @@ import ListItemText from '@mui/material/ListItemText';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import TransactionsIcon from '@mui/icons-material/Assignment';
 import Link from '../../Link';
+import { useRouter } from 'next/router';
 
-export const mainListItems = (
-  <div>
-    <ListItem button component={Link} href="/">
-      <ListItemIcon>
-        <DashboardIcon />
-      </ListItemIcon>
-      <ListItemText primary="Dashboard" />
-    </ListItem>
-    <ListItem button component={Link} href="/transactions">
-      <ListItemIcon>
-        <TransactionsIcon />
-      </ListItemIcon>
-      <ListItemText primary="Transactions" />
-    </ListItem>
-    <ListItem button component={Link} href="/accounts">
-      <ListItemIcon>
-        <TransactionsIcon />
-      </ListItemIcon>
-      <ListItemText primary="Accounts" />
-    </ListItem>
-    <ListItem button component={Link} href="/budget">
-      <ListItemIcon>
-        <TransactionsIcon />
-      </ListItemIcon>
-      <ListItemText primary="Budget" />
-    </ListItem>
-  </div>
-);
+const menu = [
+  { href: '/', text: 'Dashboard', Icon: DashboardIcon },
+  { href: '/transactions', text: 'Transactions', Icon: TransactionsIcon },
+  { href: '/accounts', text: 'Accounts', Icon: TransactionsIcon },
+  { href: '/budget', text: 'Budget', Icon: TransactionsIcon },
+];
+
+export const MenuListItems = () => {
+  const router = useRouter();
+
+  return (
+    <>
+      {menu.map(({ href, Icon, text }, i) => (
+        <ListItem key={i} button component={Link} href={href} selected={href === router.route}>
+          <ListItemIcon>
+            <Icon />
+          </ListItemIcon>
+          <ListItemText primary={text} />
+        </ListItem>
+      ))}
+    </>
+  );
+};
