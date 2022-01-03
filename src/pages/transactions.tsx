@@ -8,6 +8,7 @@ import TransactionForm from '@/components/TransactionForm';
 import TransactionTypeMenu from '@/components/transactions/TransactionTypeMenu';
 
 import { getLayout } from '@/components/layouts/dashboard/Dashboard';
+import InputSearch from '@/components/InputSearch';
 
 export default function TransactionsPage({ currentPeriod, setCurrentPeriod }: MyAppState) {
   return (
@@ -17,6 +18,7 @@ export default function TransactionsPage({ currentPeriod, setCurrentPeriod }: My
           <TransactionTypeMenu />
           <MonthSelector setCurrentPeriod={setCurrentPeriod} currentPeriod={currentPeriod} />
           <Box sx={{ flexGrow: 1 }}></Box>
+          <InputSearch />
           <TransactionForm />
         </Box>
       </Grid>
