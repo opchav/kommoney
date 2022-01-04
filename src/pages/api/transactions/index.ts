@@ -58,6 +58,11 @@ async function handleGET(req: NextApiRequest, res: NextApiResponse, session: Ses
   res.json({ transactions });
 }
 
+function getTxType(txType: string) {
+  if (txType == 'INCOME') return TransactionType.INCOME;
+  return TransactionType.EXPENSE;
+}
+
 async function handlePOST(req: NextApiRequest, res: NextApiResponse, session: Session) {
   if (req.method !== 'POST') return false;
 
@@ -67,7 +72,7 @@ async function handlePOST(req: NextApiRequest, res: NextApiResponse, session: Se
     data: {
       description: tx.title,
       value: tx.value,
-      type: tx.type,
+      type: getTxType(tx.type),
       txDate: new Date(tx.txDate),
       paid: tx.paid,
       user: { connect: { email: session.user?.email } },

@@ -39,7 +39,7 @@ const headCells: readonly HeadCell[] = [
     id: 'paid',
     numeric: false,
     disablePadding: false,
-    label: 'Status',
+    label: 'Paid',
   },
   {
     id: 'title',

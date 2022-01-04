@@ -1,5 +1,5 @@
 import * as React from 'react';
-import useSWR, { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
@@ -12,15 +12,20 @@ import ArticleIcon from '@mui/icons-material/Article';
 import {
   FormControl,
   FormControlLabel,
+  FormHelperText,
   Input,
   InputAdornment,
   InputLabel,
+  LinearProgress,
+  MenuItem,
+  Select,
   Stack,
   Switch,
 } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/lab';
 import AdapterDateFns from '@mui/lab/AdapterDateFns';
 import { fetcher } from '@/utils/helpers';
+import { grey } from '@mui/material/colors';
 
 const ModalBox = styled(Box)(({ theme }) => ({
   position: 'absolute',
@@ -39,18 +44,21 @@ type TransactionInput = {
   txDate: Date;
   category: string;
   account: string;
-  type: 'income' | 'expense';
+  type: 'INCOME' | 'EXPENSE';
 };
 
-const initTransaction: TransactionInput = {
+const defaultTransaction: TransactionInput = {
   title: '',
   value: 10,
   paid: false,
   txDate: new Date(),
   category: 'ckxxfepsh0003wqw52q8xgfuu',
   account: 'ckxxfepsh0031wqw5p7x40gi3',
-  type: 'expense',
+  type: 'EXPENSE',
 };
+
+// TODO the add button opens up a menu to select the transaction type. The form
+// then already the tx type set
 
 async function saveTransaction(newTx: TransactionInput) {
   const res = await fetch('/api/transactions', {
@@ -63,26 +71,65 @@ async function saveTransaction(newTx: TransactionInput) {
 
 export default function TransactionForm() {
   const { mutate } = useSWR('/api/transactions', fetcher);
+  const categories = useSWR('/api/categories', fetcher);
+  const txAccounts = useSWR('/api/txaccounts', fetcher);
+
+  // TODO add validations with `yup` or `zod`
+
   const [open, setOpen] = React.useState(false);
   const {
     control,
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<TransactionInput>();
+    reset,
+  } = useForm<TransactionInput>({
+    defaultValues: defaultTransaction,
+  });
 
   const onSubmit: SubmitHandler<TransactionInput> = (newTransaction) => {
     // TODO set right type for `transactions`. Currently using `Record<string, any>` to speed up dev
     mutate(async (data: { transactions: Record<string, any>[] }) => {
       console.log('txxxxx', data);
       const createdTx: Record<string, any> = await saveTransaction(newTransaction);
-      setOpen(false);
+      // TODO better handle `reset`. state change here is causing memory leak warning?
+      handleClose();
       return { transactions: [...data.transactions, createdTx] };
     });
   };
 
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    setOpen(false);
+    reset();
+  };
+
+  console.log('ERRORS', errors);
+
+  if (!categories.data || !txAccounts.data) {
+    return (
+      <>
+        <Button variant="contained" color="primary" onClick={handleOpen}>
+          Add
+        </Button>
+        <Modal
+          open={open}
+          onClose={handleClose}
+          aria-labelledby="modal-modal-title"
+          aria-describedby="modal-modal-description"
+        >
+          <ModalBox>
+            <Typography component="h1" variant="h5">
+              New expense
+            </Typography>
+            <Stack>
+              <LinearProgress />
+            </Stack>
+          </ModalBox>
+        </Modal>
+      </>
+    );
+  }
 
   return (
     <>
@@ -106,7 +153,6 @@ export default function TransactionForm() {
                 <Input
                   id="tx-value"
                   type="number"
-                  defaultValue={initTransaction.value}
                   startAdornment={
                     <InputAdornment position="start">
                       <AttachMoneyIcon />
@@ -121,28 +167,29 @@ export default function TransactionForm() {
               />
             </Stack>
 
-            <FormControl sx={{ m: 1 }} variant="standard">
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <Controller
-                  control={control}
-                  name="txDate"
-                  rules={{ required: true }}
-                  render={({ field: { onChange, value } }) => (
+            <Controller
+              control={control}
+              name="txDate"
+              rules={{ required: true }}
+              render={({ field: { onChange, value } }) => (
+                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.date}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
                     <DatePicker
                       onChange={onChange}
                       value={value}
+                      label="Date"
                       renderInput={(props) => <TextField {...props} variant="standard" />}
                     />
-                  )}
-                />
-              </LocalizationProvider>
-            </FormControl>
+                  </LocalizationProvider>
+                  {errors.date && <FormHelperText>Select a valid date</FormHelperText>}
+                </FormControl>
+              )}
+            />
 
-            <FormControl sx={{ m: 1 }} variant="standard">
+            <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.title}>
               <InputLabel htmlFor="standard-adornment-amount">Description</InputLabel>
               <Input
                 id="tx-title"
-                defaultValue={initTransaction.title}
                 startAdornment={
                   <InputAdornment position="start">
                     <ArticleIcon />
@@ -150,35 +197,78 @@ export default function TransactionForm() {
                 }
                 {...register('title', { required: true })}
               />
+              {errors.title && <FormHelperText>Title cannot be empty</FormHelperText>}
             </FormControl>
 
-            <FormControl sx={{ m: 1 }} variant="standard">
-              <InputLabel htmlFor="standard-adornment-amount">Category</InputLabel>
-              <Input
-                id="tx-category"
-                defaultValue={initTransaction.category}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <ArticleIcon />
-                  </InputAdornment>
-                }
-                {...register('category', { required: true })}
-              />
-            </FormControl>
+            <Controller
+              control={control}
+              name="category"
+              rules={{ required: true }}
+              render={({ field }) => (
+                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.category}>
+                  <InputLabel id="tx-category-lb">Category</InputLabel>
+                  <Select
+                    id="tx-category"
+                    labelId="tx-category-lb"
+                    label="Category"
+                    {...field}
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <ArticleIcon />
+                      </InputAdornment>
+                    }
+                  >
+                    <MenuItem value="">
+                      <Typography component="em" sx={{ color: grey[600] }}>
+                        None
+                      </Typography>
+                    </MenuItem>
+                    {/* TODO set type for category to remove `Record` and `as string` */}
+                    {(categories.data.categories as Record<string, unknown>[]).map((item) => (
+                      <MenuItem key={item.id as string} value={item.id as string}>
+                        {item.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.category && <FormHelperText>Select a valid category</FormHelperText>}
+                </FormControl>
+              )}
+            />
 
-            <FormControl sx={{ m: 1 }} variant="standard">
-              <InputLabel htmlFor="standard-adornment-amount">Account</InputLabel>
-              <Input
-                id="tx-account"
-                defaultValue={initTransaction.account}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <ArticleIcon />
-                  </InputAdornment>
-                }
-                {...register('account', { required: true })}
-              />
-            </FormControl>
+            <Controller
+              control={control}
+              name="account"
+              rules={{ required: true }}
+              render={({ field }) => (
+                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.account}>
+                  <InputLabel id="tx-account-lb">Account</InputLabel>
+                  <Select
+                    id="tx-account"
+                    labelId="tx-account-lb"
+                    label="Account"
+                    {...field}
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <ArticleIcon />
+                      </InputAdornment>
+                    }
+                  >
+                    <MenuItem value="">
+                      <Typography component="em" sx={{ color: grey[600] }}>
+                        None
+                      </Typography>
+                    </MenuItem>
+                    {/* TODO set type for txAccount to remove `Record` and `as string` */}
+                    {(txAccounts.data.txAccounts as Record<string, unknown>[]).map((item) => (
+                      <MenuItem key={item.id as string} value={item.id as string}>
+                        {item.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.account && <FormHelperText>Select a valid account</FormHelperText>}
+                </FormControl>
+              )}
+            />
 
             <Box sx={{ display: 'flex', pt: 2, justifyContent: 'flex-end' }}>
               <Button variant="contained" type="submit">
