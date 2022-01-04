@@ -1,4 +1,5 @@
 import * as React from 'react';
+import useSWR, { useSWRConfig } from 'swr';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
@@ -19,6 +20,7 @@ import {
 } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/lab';
 import AdapterDateFns from '@mui/lab/AdapterDateFns';
+import { fetcher } from '@/utils/helpers';
 
 const ModalBox = styled(Box)(({ theme }) => ({
   position: 'absolute',
@@ -34,32 +36,49 @@ type TransactionInput = {
   value: number;
   title: string;
   paid: boolean;
-  date: Date;
+  txDate: Date;
   category: string;
   account: string;
+  type: 'income' | 'expense';
 };
 
 const initTransaction: TransactionInput = {
   title: '',
   value: 10,
   paid: false,
-  date: new Date(),
-  category: '1',
-  account: '1',
+  txDate: new Date(),
+  category: 'ckxxfepsh0003wqw52q8xgfuu',
+  account: 'ckxxfepsh0031wqw5p7x40gi3',
+  type: 'expense',
 };
 
+async function saveTransaction(newTx: TransactionInput) {
+  const res = await fetch('/api/transactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newTx),
+  });
+  return res.json();
+}
+
 export default function TransactionForm() {
+  const { mutate } = useSWR('/api/transactions', fetcher);
   const [open, setOpen] = React.useState(false);
   const {
     control,
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<TransactionInput>();
 
-  const onSubmit: SubmitHandler<TransactionInput> = (data) => {
-    console.log('>>>', data);
+  const onSubmit: SubmitHandler<TransactionInput> = (newTransaction) => {
+    // TODO set right type for `transactions`. Currently using `Record<string, any>` to speed up dev
+    mutate(async (data: { transactions: Record<string, any>[] }) => {
+      console.log('txxxxx', data);
+      const createdTx: Record<string, any> = await saveTransaction(newTransaction);
+      setOpen(false);
+      return { transactions: [...data.transactions, createdTx] };
+    });
   };
 
   const handleOpen = () => setOpen(true);
@@ -106,7 +125,7 @@ export default function TransactionForm() {
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <Controller
                   control={control}
-                  name="date"
+                  name="txDate"
                   rules={{ required: true }}
                   render={({ field: { onChange, value } }) => (
                     <DatePicker

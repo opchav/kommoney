@@ -17,9 +17,15 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import { visuallyHidden } from '@mui/utils';
 import { Transaction } from '../../types/transaction';
 import { useTransactions } from '../../context/TransactionContext';
+import useSWR from 'swr';
+import { fetcher } from '@/utils/helpers';
+import { LinearProgress } from '@mui/material';
+import { green, red } from '@mui/material/colors';
 
 interface HeadCell {
   disablePadding: boolean;
@@ -29,6 +35,12 @@ interface HeadCell {
 }
 
 const headCells: readonly HeadCell[] = [
+  {
+    id: 'paid',
+    numeric: false,
+    disablePadding: false,
+    label: 'Status',
+  },
   {
     id: 'title',
     numeric: false,
@@ -54,12 +66,6 @@ const headCells: readonly HeadCell[] = [
     label: 'Date',
   },
   {
-    id: 'paid',
-    numeric: true,
-    disablePadding: false,
-    label: 'Paid',
-  },
-  {
     id: 'category',
     numeric: true,
     disablePadding: false,
@@ -82,8 +88,7 @@ const headCells: readonly HeadCell[] = [
 export default function TransactionsTable() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-
-  const transactions = useTransactions();
+  const { data, error } = useSWR('/api/transactions', fetcher);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -95,7 +100,10 @@ export default function TransactionsTable() {
   };
 
   // Avoid a layout jump when reaching the last page with empty rows.
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - transactions.length) : 0;
+  // const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - transactions.length) : 0;
+  const emptyRows = 0;
+
+  console.log('>>>', data);
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -117,51 +125,67 @@ export default function TransactionsTable() {
             </IconButton>
           </Tooltip>
         </Toolbar>
-        <TableContainer>
-          <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle" size="medium">
-            <TableHead>
-              <TableRow>
-                {headCells.map((headCell) => (
-                  <TableCell key={headCell.id} align={headCell.numeric ? 'right' : 'left'}>
-                    {headCell.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {transactions
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((row, index) => (
-                  <TableRow hover tabIndex={-1} key={row.title}>
-                    <TableCell component="th" id={`row-tx-${index}`} scope="row">
-                      {row.title}
-                    </TableCell>
-                    <TableCell align="right">{row.value}</TableCell>
-                    <TableCell align="right">{row.type}</TableCell>
-                    <TableCell align="right">{new Date(row.date).toLocaleString()}</TableCell>
-                    <TableCell align="right">{row.paid ? 'Yes' : 'no'}</TableCell>
-                    <TableCell align="right">{row.category}</TableCell>
-                    <TableCell align="right">{row.account}</TableCell>
-                    <TableCell align="right">{row.note}</TableCell>
+        {error && <Typography>Errorrrrrrrrrrr</Typography>}
+        {!data && (
+          <Box sx={{ width: '100%' }}>
+            <LinearProgress />
+          </Box>
+        )}
+        {data && (
+          <>
+            <TableContainer>
+              <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle" size="medium">
+                <TableHead>
+                  <TableRow>
+                    {headCells.map((headCell) => (
+                      <TableCell key={headCell.id} align={headCell.numeric ? 'right' : 'left'}>
+                        {headCell.label}
+                      </TableCell>
+                    ))}
                   </TableRow>
-                ))}
-              {emptyRows > 0 && (
-                <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={6} />
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[10, 25, 50]}
-          component="div"
-          count={transactions.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
+                </TableHead>
+                <TableBody>
+                  {(data.transactions as Record<string, any>[])
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((row, index) => (
+                      <TableRow hover tabIndex={-1} key={row.id}>
+                        <TableCell align="left">
+                          {row.paid ? (
+                            <CheckCircleOutlineIcon sx={{ color: green[300] }} />
+                          ) : (
+                            <ErrorOutlineOutlinedIcon sx={{ color: red[300] }} />
+                          )}
+                        </TableCell>
+                        <TableCell component="th" id={`row-tx-${index}`} scope="row">
+                          {row.description}
+                        </TableCell>
+                        <TableCell align="right">{row.value}</TableCell>
+                        <TableCell align="right">{row.type}</TableCell>
+                        <TableCell align="right">{new Date(row.txDate).toLocaleString()}</TableCell>
+                        <TableCell align="right">{row.category?.name}</TableCell>
+                        <TableCell align="right">{row.TxAccount?.name}</TableCell>
+                        <TableCell align="right">{row.note}</TableCell>
+                      </TableRow>
+                    ))}
+                  {emptyRows > 0 && (
+                    <TableRow style={{ height: 53 * emptyRows }}>
+                      <TableCell colSpan={6} />
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[10, 25, 50]}
+              component="div"
+              count={data.transactions.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </>
+        )}
       </Paper>
     </Box>
   );
