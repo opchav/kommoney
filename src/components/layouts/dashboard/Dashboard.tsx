@@ -10,14 +10,17 @@ import MuiDrawer from '@mui/material/Drawer';
 import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 
 // icons
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 import { MenuListItems } from './listItems';
+import { Avatar, Menu, MenuItem, Tooltip } from '@mui/material';
 
 const drawerWidth: number = 240;
 
@@ -69,15 +72,45 @@ const Drawer = styled(MuiDrawer, {
   },
 }));
 
+const settings = [
+  { menu: 'Profile', action: () => {} },
+  { menu: 'Logout', action: () => signOut() },
+];
+
 type DashboardProps = {
   children: ReactNode;
 };
 
 export default function DashboardLayout({ children }: DashboardProps) {
   const [open, setOpen] = React.useState(true);
+  const { data: session } = useSession();
+
+  const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
+
+  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorElUser(event.currentTarget);
+  };
+
+  const handleCloseUserMenu = () => {
+    setAnchorElUser(null);
+  };
+
   const toggleDrawer = () => {
     setOpen(!open);
   };
+
+  if (!session) {
+    return (
+      <Box sx={{ textAlign: 'center' }}>
+        <Typography component="h1" variant="h6" color="inherit">
+          You need to sign in
+        </Typography>
+        <Button onClick={() => signIn()} variant="contained">
+          Sign in
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -98,11 +131,41 @@ export default function DashboardLayout({ children }: DashboardProps) {
           <Typography component="h1" variant="h6" color="inherit" noWrap sx={{ flexGrow: 1 }}>
             Dashboard
           </Typography>
-          <IconButton color="inherit">
-            <Badge badgeContent={4} color="secondary">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
+          <Box sx={{ flexGrow: 0 }}>
+            <Tooltip title="Open settings">
+              <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                <Avatar alt={session.user.name} src="/static/images/avatar/2.jpg" />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              sx={{ mt: '45px' }}
+              id="menu-appbar"
+              anchorEl={anchorElUser}
+              anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              open={Boolean(anchorElUser)}
+              onClose={handleCloseUserMenu}
+            >
+              {settings.map(({ menu, action }) => (
+                <MenuItem
+                  key={menu}
+                  onClick={() => {
+                    action();
+                    handleCloseUserMenu();
+                  }}
+                >
+                  <Typography textAlign="center">{menu}</Typography>
+                </MenuItem>
+              ))}
+            </Menu>
+          </Box>
         </Toolbar>
       </AppBar>
       <Drawer variant="permanent" open={open}>

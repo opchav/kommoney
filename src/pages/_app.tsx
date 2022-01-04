@@ -20,6 +20,7 @@ function MyApp(props: MyAppProps) {
 
   // https://dev.to/ofilipowicz/next-js-per-page-layouts-and-typescript-lh5
   const getLayout = Component.getLayout || ((page: React.ReactNode) => page);
+  console.log('>>', props.session);
 
   return (
     <SessionProvider session={props.session}>
