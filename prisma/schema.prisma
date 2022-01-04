@@ -13,6 +13,7 @@ model Transaction {
   description String
   note        String?
   value       Decimal         @db.Decimal(10, 2)
+  paid        Boolean         @default(false)
   type        TransactionType @default(EXPENSE)
   createdAt   DateTime        @default(now()) @map("created_at")
   updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at")
