@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import Modal from '@mui/material/Modal';
@@ -8,7 +8,6 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ArticleIcon from '@mui/icons-material/Article';
-import { useTransactionsDispatch } from '../context/TransactionContext';
 import {
   FormControl,
   FormControlLabel,
@@ -18,6 +17,8 @@ import {
   Stack,
   Switch,
 } from '@mui/material';
+import { LocalizationProvider, DatePicker } from '@mui/lab';
+import AdapterDateFns from '@mui/lab/AdapterDateFns';
 
 const ModalBox = styled(Box)(({ theme }) => ({
   position: 'absolute',
@@ -33,17 +34,24 @@ type TransactionInput = {
   value: number;
   title: string;
   paid: boolean;
+  date: Date;
+  category: string;
+  account: string;
 };
 
 const initTransaction: TransactionInput = {
   title: '',
   value: 10,
   paid: false,
+  date: new Date(),
+  category: '1',
+  account: '1',
 };
 
 export default function TransactionForm() {
   const [open, setOpen] = React.useState(false);
   const {
+    control,
     register,
     handleSubmit,
     watch,
@@ -85,7 +93,7 @@ export default function TransactionForm() {
                       <AttachMoneyIcon />
                     </InputAdornment>
                   }
-                  {...register('value')}
+                  {...register('value', { required: true })}
                 />
               </FormControl>
               <FormControlLabel
@@ -94,7 +102,24 @@ export default function TransactionForm() {
               />
             </Stack>
 
-            <FormControl fullWidth sx={{ m: 1 }} variant="standard">
+            <FormControl sx={{ m: 1 }} variant="standard">
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Controller
+                  control={control}
+                  name="date"
+                  rules={{ required: true }}
+                  render={({ field: { onChange, value } }) => (
+                    <DatePicker
+                      onChange={onChange}
+                      value={value}
+                      renderInput={(props) => <TextField {...props} variant="standard" />}
+                    />
+                  )}
+                />
+              </LocalizationProvider>
+            </FormControl>
+
+            <FormControl sx={{ m: 1 }} variant="standard">
               <InputLabel htmlFor="standard-adornment-amount">Description</InputLabel>
               <Input
                 id="tx-title"
@@ -104,7 +129,35 @@ export default function TransactionForm() {
                     <ArticleIcon />
                   </InputAdornment>
                 }
-                {...register('title')}
+                {...register('title', { required: true })}
+              />
+            </FormControl>
+
+            <FormControl sx={{ m: 1 }} variant="standard">
+              <InputLabel htmlFor="standard-adornment-amount">Category</InputLabel>
+              <Input
+                id="tx-category"
+                defaultValue={initTransaction.category}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <ArticleIcon />
+                  </InputAdornment>
+                }
+                {...register('category', { required: true })}
+              />
+            </FormControl>
+
+            <FormControl sx={{ m: 1 }} variant="standard">
+              <InputLabel htmlFor="standard-adornment-amount">Account</InputLabel>
+              <Input
+                id="tx-account"
+                defaultValue={initTransaction.account}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <ArticleIcon />
+                  </InputAdornment>
+                }
+                {...register('account', { required: true })}
               />
             </FormControl>
 
