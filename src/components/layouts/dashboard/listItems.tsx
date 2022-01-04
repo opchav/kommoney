@@ -8,7 +8,7 @@ import Link from '../../Link';
 import { useRouter } from 'next/router';
 
 const menu = [
-  { href: '/', text: 'Dashboard', Icon: DashboardIcon },
+  { href: '/dashboard', text: 'Dashboard', Icon: DashboardIcon },
   { href: '/transactions', text: 'Transactions', Icon: TransactionsIcon },
   { href: '/accounts', text: 'Accounts', Icon: TransactionsIcon },
   { href: '/budget', text: 'Budget', Icon: TransactionsIcon },
