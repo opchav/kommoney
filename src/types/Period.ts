@@ -2,7 +2,11 @@ import startOfMonth from 'date-fns/startOfMonth';
 import endOfMonth from 'date-fns/endOfMonth';
 import formatISO from 'date-fns/formatISO';
 
-export const MONTHS: Array<Record<string, string>> = [
+type Month = {
+  full: string;
+  short: string;
+};
+export const MONTHS: Array<Month> = [
   { full: 'January', short: 'Jan' },
   { full: 'February', short: 'Feb' },
   { full: 'March', short: 'Mar' },
@@ -14,7 +18,7 @@ export const MONTHS: Array<Record<string, string>> = [
   { full: 'September', short: 'Sep' },
   { full: 'October', short: 'Oct' },
   { full: 'November', short: 'Nov' },
-  { full: 'Dec', short: 'Dec' },
+  { full: 'December', short: 'Dec' },
 ];
 
 export default class Period {

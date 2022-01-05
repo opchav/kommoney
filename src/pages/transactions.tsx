@@ -3,7 +3,6 @@ import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 
 import TransactionsTable from '@/components/transactions/TransactionsTable';
-import { MyAppState } from '@/types/my-app';
 import MonthSelector from '@/components/MonthSelector';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionTypeMenu from '@/components/transactions/TransactionTypeMenu';
@@ -11,8 +10,14 @@ import TransactionTypeMenu from '@/components/transactions/TransactionTypeMenu';
 import { getLayout } from '@/components/layouts/dashboard/Dashboard';
 import InputSearch from '@/components/InputSearch';
 import { TransactionType, transactionTypes } from '@/types/app';
+import Period from '@/types/Period';
 
-export default function TransactionsPage({ currentPeriod, setCurrentPeriod }: MyAppState) {
+type PageProps = {
+  period: Period;
+  setPeriod: React.Dispatch<React.SetStateAction<Period>>;
+};
+
+export default function TransactionsPage({ period, setPeriod }: PageProps) {
   const [transactionType, setTransactionType] = React.useState<TransactionType | null>();
 
   return (
@@ -23,17 +28,17 @@ export default function TransactionsPage({ currentPeriod, setCurrentPeriod }: My
             transactionType={transactionType}
             setTransactionType={setTransactionType}
           />
-          <MonthSelector setCurrentPeriod={setCurrentPeriod} currentPeriod={currentPeriod} />
+          <MonthSelector period={period} setPeriod={setPeriod} />
           <Box sx={{ flexGrow: 1 }}></Box>
           <InputSearch />
           <TransactionForm
-            currentPeriod={currentPeriod}
+            period={period}
             transactionType={transactionType || transactionTypes.EXPENSE}
           />
         </Box>
       </Grid>
       <Grid item xs={12}>
-        <TransactionsTable transactionType={transactionType} currentPeriod={currentPeriod} />
+        <TransactionsTable transactionType={transactionType} period={period} />
       </Grid>
     </Grid>
   );

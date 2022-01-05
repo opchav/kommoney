@@ -13,15 +13,19 @@ import { blue } from '@mui/material/colors';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-import { MyAppState } from '../types/my-app';
-import { getMonthName, MONTHS } from '../utils/helpers';
+import Period, { MONTHS } from '@/types/Period';
 
 const MyButton = styled(Button)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   color: theme.palette.text.primary,
 }));
 
-export default function MonthSelector({ currentPeriod, setCurrentPeriod }: MyAppState) {
+type PageProps = {
+  period: Period;
+  setPeriod: React.Dispatch<React.SetStateAction<Period>>;
+};
+
+export default function MonthSelector({ period, setPeriod }: PageProps) {
   const [year, setYear] = React.useState(new Date().getFullYear());
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
 
@@ -29,8 +33,8 @@ export default function MonthSelector({ currentPeriod, setCurrentPeriod }: MyApp
     setAnchorEl(null);
     // just in case the use selects a different a year but doesn't confirm.
     // When closing the poppover ensure the year selector = current period's year
-    if (checkYear && year !== currentPeriod.year) {
-      setYear(currentPeriod.year);
+    if (checkYear && year !== period.year) {
+      setYear(period.year);
     }
   };
 
@@ -39,26 +43,18 @@ export default function MonthSelector({ currentPeriod, setCurrentPeriod }: MyApp
   };
 
   const handleSelectPeriod = (month: number) => {
-    setCurrentPeriod({ month, year });
+    setPeriod(new Period(month, year));
     handleClose(false);
   };
 
   const handleNextPeriod = () => {
-    if (currentPeriod.month === 11) {
-      setCurrentPeriod((prev) => ({ month: 0, year: prev.year + 1 }));
-      setYear(currentPeriod.year + 1);
-    } else {
-      setCurrentPeriod((prev) => ({ month: prev.month + 1, year: prev.year }));
-    }
+    setPeriod(period.getNextPeriod());
+    setYear(period.year);
   };
 
   const handlePrevPeriod = () => {
-    if (currentPeriod.month === 0) {
-      setCurrentPeriod((prev) => ({ month: 11, year: prev.year - 1 }));
-      setYear(currentPeriod.year - 1);
-    } else {
-      setCurrentPeriod((prev) => ({ month: prev.month - 1, year: prev.year }));
-    }
+    setPeriod(period.getPreviousPeriod());
+    setYear(period.year);
   };
 
   const open = Boolean(anchorEl);
@@ -71,7 +67,7 @@ export default function MonthSelector({ currentPeriod, setCurrentPeriod }: MyApp
       </IconButton>
       <Box width={200}>
         <MyButton aria-describedby={id} onClick={handleClick} sx={{ width: '100%' }}>
-          {getMonthName(currentPeriod.month)}, {currentPeriod.year}
+          {period.toMonthName()}
         </MyButton>
         <Popover
           id={id}
@@ -94,18 +90,18 @@ export default function MonthSelector({ currentPeriod, setCurrentPeriod }: MyApp
                 </IconButton>
               </Stack>
             </Grid>
-            {MONTHS.map(([text], i) => (
+            {MONTHS.map((aMonth, i) => (
               <Grid item xs={3} sm={2} md={4} key={i}>
                 <MyButton
                   sx={{
                     width: '100%',
-                    color: i === currentPeriod.month ? blue[800] : '',
+                    color: i === period.month ? blue[800] : '',
                     p: 1,
                   }}
-                  variant={i === currentPeriod.month ? 'outlined' : 'text'}
+                  variant={i === period.month ? 'outlined' : 'text'}
                   onClick={() => handleSelectPeriod(i)}
                 >
-                  {text}
+                  {aMonth.full}
                 </MyButton>
               </Grid>
             ))}

@@ -15,18 +15,23 @@ import ArrowCircleUpIcon from '@mui/icons-material/ArrowCircleUp';
 import ArrowCircleDownIcon from '@mui/icons-material/ArrowCircleDown';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 
-import { MyAppState } from '@/types/my-app';
 import { getLayout } from '@/components/layouts/dashboard/Dashboard';
 import MonthSelector from '@/components/MonthSelector';
 import { useTransactions } from '@/context/TransactionContext';
+import Period from '@/types/Period';
 
-export default function DashboardPage({ currentPeriod, setCurrentPeriod }: MyAppState) {
+type PageProps = {
+  period: Period;
+  setPeriod: React.Dispatch<React.SetStateAction<Period>>;
+};
+
+export default function DashboardPage({ period, setPeriod }: PageProps) {
   return (
     <>
       <Grid container spacing={3} sx={{ pb: 3 }}>
         <Grid item xs={12}>
           <Box sx={{ display: 'flex', alignItems: 'center', ml: -4 }}>
-            <MonthSelector currentPeriod={currentPeriod} setCurrentPeriod={setCurrentPeriod} />
+            <MonthSelector period={period} setPeriod={setPeriod} />
           </Box>
         </Grid>
       </Grid>
