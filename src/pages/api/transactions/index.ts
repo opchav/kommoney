@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '@/utils/prisma';
 import { Session } from 'next-auth';
 import { getSession } from 'next-auth/react';
+import startOfMonth from 'date-fns/startOfMonth';
+import endOfMonth from 'date-fns/endOfMonth';
+import formatISO from 'date-fns/formatISO';
 import { TransactionType } from '@prisma/client';
 
 type TransactionInput = {
@@ -35,11 +38,44 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
   return res.json({ method: req.method });
 }
 
+type TransactionQuery = {
+  type?: string;
+  period: string;
+};
+
+// TODO convert to `Period` type
+function getDateRange(period: string) {
+  const date = period ? new Date(`${period}-15T23:59:59`) : new Date();
+  return {
+    start: startOfMonth(date),
+    end: endOfMonth(date),
+  };
+}
+
+// TODO handle pagination in case this endpoint gets used to retrieve not only data scoped to the selected period
 async function handleGET(req: NextApiRequest, res: NextApiResponse, session: Session) {
   if (req.method !== 'GET') return false;
 
+  const { type: aType, period } = req.query as TransactionQuery;
+
+  // TODO enable searching transactions by description
+
+  const txType = getTxType(aType);
+  const dateRange = getDateRange(period);
+
+  // TODO optimize query. currently there are 2 queries to fetch transactions. 1st without period and 2nd with period
+
   const transactions = await prisma.transaction.findMany({
-    where: { user: { email: session.user?.email } },
+    where: {
+      user: { email: session.user?.email },
+      ...(txType && { type: txType }),
+      AND: {
+        txDate: {
+          gte: dateRange.start,
+          lte: dateRange.end,
+        },
+      },
+    },
     select: {
       id: true,
       description: true,
@@ -58,9 +94,11 @@ async function handleGET(req: NextApiRequest, res: NextApiResponse, session: Ses
   res.json({ transactions });
 }
 
-function getTxType(txType: string) {
+function getTxType(txType?: string) {
   if (txType == 'INCOME') return TransactionType.INCOME;
-  return TransactionType.EXPENSE;
+  if (txType == 'EXPENSE') return TransactionType.EXPENSE;
+  if (txType == 'TRANSFER') return TransactionType.TRANSFER;
+  return;
 }
 
 async function handlePOST(req: NextApiRequest, res: NextApiResponse, session: Session) {
@@ -80,8 +118,6 @@ async function handlePOST(req: NextApiRequest, res: NextApiResponse, session: Se
       TxAccount: { connect: { id: tx.account } },
     },
   });
-
-  console.log('>>>>', result);
 
   return res.json({ transaction: result });
 }

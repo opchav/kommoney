@@ -35,6 +35,7 @@ export function randomId() {
   return (Math.random() + 1).toString(36).substring(2);
 }
 
+// TODO promote this to a class and add `publid toString = () : string => {}`
 export type Period = {
   month: number;
   year: number;

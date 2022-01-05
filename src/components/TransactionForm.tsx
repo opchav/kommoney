@@ -1,5 +1,5 @@
 import * as React from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
@@ -24,8 +24,9 @@ import {
 } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/lab';
 import AdapterDateFns from '@mui/lab/AdapterDateFns';
-import { fetcher } from '@/utils/helpers';
+import { fetcher, Period } from '@/utils/helpers';
 import { grey } from '@mui/material/colors';
+import { TransactionType } from '@/types/app';
 
 const ModalBox = styled(Box)(({ theme }) => ({
   position: 'absolute',
@@ -44,17 +45,7 @@ type TransactionInput = {
   txDate: Date;
   category: string;
   account: string;
-  type: 'INCOME' | 'EXPENSE';
-};
-
-const defaultTransaction: TransactionInput = {
-  title: '',
-  value: 10,
-  paid: false,
-  txDate: new Date(),
-  category: 'ckxxfepsh0003wqw52q8xgfuu',
-  account: 'ckxxfepsh0031wqw5p7x40gi3',
-  type: 'EXPENSE',
+  type: TransactionType;
 };
 
 // TODO the add button opens up a menu to select the transaction type. The form
@@ -69,8 +60,13 @@ async function saveTransaction(newTx: TransactionInput) {
   return res.json();
 }
 
-export default function TransactionForm() {
-  const { mutate } = useSWR('/api/transactions', fetcher);
+type Props = {
+  currentPeriod: Period;
+  transactionType: TransactionType;
+};
+
+export default function TransactionForm({ currentPeriod, transactionType }: Props) {
+  const { mutate } = useSWRConfig();
   const categories = useSWR('/api/categories', fetcher);
   const txAccounts = useSWR('/api/txaccounts', fetcher);
 
@@ -84,18 +80,41 @@ export default function TransactionForm() {
     formState: { errors },
     reset,
   } = useForm<TransactionInput>({
-    defaultValues: defaultTransaction,
+    defaultValues: {
+      title: '',
+      value: 10,
+      paid: false,
+      txDate: new Date(),
+      // TODO list categories based on the transaction type selected
+      category: '',
+      account: '',
+      // NOTE why no error if `type` is missing?
+    },
   });
 
   const onSubmit: SubmitHandler<TransactionInput> = (newTransaction) => {
     // TODO set right type for `transactions`. Currently using `Record<string, any>` to speed up dev
-    mutate(async (data: { transactions: Record<string, any>[] }) => {
-      console.log('txxxxx', data);
-      const createdTx: Record<string, any> = await saveTransaction(newTransaction);
-      // TODO better handle `reset`. state change here is causing memory leak warning?
-      handleClose();
-      return { transactions: [...data.transactions, createdTx] };
-    });
+    const { txDate, type } = newTransaction;
+    const month = `${txDate.getMonth() + 1}`.padStart(2, '0');
+    const year = txDate.getFullYear();
+    // TODO promote this to some helper
+    const query = [`period=${year}-${month}`, `type=${type}`].join('&');
+
+    // TODO after creating a income the table doesn't refresh. fix this.
+
+    // TODO since `api/transactions` comes with a query, build some helper to build this endpoint,
+    // or maybe use array [endpoint, period, type] option from swr
+    // TODO how to ensure `transactions` is not `undefined` without default `[]`?
+    mutate(
+      `api/transactions?${query}`,
+      // TODO use right type for transactions. fix this ugliness
+      async ({ transactions }: { transactions: Record<string, any>[] } = { transactions: [] }) => {
+        const createdTx: Record<string, any> = await saveTransaction(newTransaction);
+        // TODO better handle `reset`. state change here is causing memory leak warning?
+        handleClose();
+        return { transactions: [...transactions, createdTx] };
+      },
+    );
   };
 
   const handleOpen = () => setOpen(true);
@@ -104,7 +123,7 @@ export default function TransactionForm() {
     reset();
   };
 
-  console.log('ERRORS', errors);
+  // TODO add field to allow the user change the type when form is open
 
   if (!categories.data || !txAccounts.data) {
     return (
@@ -120,7 +139,7 @@ export default function TransactionForm() {
         >
           <ModalBox>
             <Typography component="h1" variant="h5">
-              New expense
+              New {transactionType.toLowerCase()}
             </Typography>
             <Stack>
               <LinearProgress />
@@ -144,9 +163,11 @@ export default function TransactionForm() {
       >
         <ModalBox>
           <Typography component="h1" variant="h5">
-            New expense
+            New {transactionType.toLowerCase()}
           </Typography>
           <Stack component="form" onSubmit={handleSubmit(onSubmit)}>
+            {/* override type `value` here cuz values was always the default one from 1st render EXPENSE */}
+            <input type="hidden" {...register('type', { value: transactionType })} />
             <Stack direction="row" alignItems="flex-end">
               <FormControl fullWidth sx={{ m: 1 }} variant="standard">
                 <InputLabel htmlFor="standard-adornment-amount">Value</InputLabel>
@@ -172,7 +193,7 @@ export default function TransactionForm() {
               name="txDate"
               rules={{ required: true }}
               render={({ field: { onChange, value } }) => (
-                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.date}>
+                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.txDate}>
                   <LocalizationProvider dateAdapter={AdapterDateFns}>
                     <DatePicker
                       onChange={onChange}
@@ -181,7 +202,7 @@ export default function TransactionForm() {
                       renderInput={(props) => <TextField {...props} variant="standard" />}
                     />
                   </LocalizationProvider>
-                  {errors.date && <FormHelperText>Select a valid date</FormHelperText>}
+                  {errors.txDate && <FormHelperText>Select a valid date</FormHelperText>}
                 </FormControl>
               )}
             />

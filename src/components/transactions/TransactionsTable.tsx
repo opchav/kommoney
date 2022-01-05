@@ -23,9 +23,10 @@ import { visuallyHidden } from '@mui/utils';
 import { Transaction } from '../../types/transaction';
 import { useTransactions } from '../../context/TransactionContext';
 import useSWR from 'swr';
-import { fetcher } from '@/utils/helpers';
+import { fetcher, Period } from '@/utils/helpers';
 import { LinearProgress } from '@mui/material';
 import { green, red } from '@mui/material/colors';
+import { TransactionType } from '@/types/app';
 
 interface HeadCell {
   disablePadding: boolean;
@@ -35,62 +36,42 @@ interface HeadCell {
 }
 
 const headCells: readonly HeadCell[] = [
-  {
-    id: 'paid',
-    numeric: false,
-    disablePadding: false,
-    label: 'Paid',
-  },
-  {
-    id: 'title',
-    numeric: false,
-    disablePadding: true,
-    label: 'Title',
-  },
-  {
-    id: 'value',
-    numeric: true,
-    disablePadding: false,
-    label: 'Value',
-  },
-  {
-    id: 'type',
-    numeric: false,
-    disablePadding: false,
-    label: 'Type',
-  },
-  {
-    id: 'date',
-    numeric: true,
-    disablePadding: false,
-    label: 'Date',
-  },
-  {
-    id: 'category',
-    numeric: true,
-    disablePadding: false,
-    label: 'Category',
-  },
-  {
-    id: 'account',
-    numeric: true,
-    disablePadding: false,
-    label: 'Account',
-  },
-  {
-    id: 'note',
-    numeric: false,
-    disablePadding: false,
-    label: 'Note',
-  },
+  { id: 'paid', numeric: false, disablePadding: false, label: 'Paid' },
+  { id: 'title', numeric: false, disablePadding: true, label: 'Title' },
+  { id: 'value', numeric: true, disablePadding: false, label: 'Value' },
+  { id: 'type', numeric: false, disablePadding: false, label: 'Type' },
+  { id: 'date', numeric: true, disablePadding: false, label: 'Date' },
+  { id: 'category', numeric: true, disablePadding: false, label: 'Category' },
+  { id: 'account', numeric: true, disablePadding: false, label: 'Account' },
+  { id: 'note', numeric: false, disablePadding: false, label: 'Note' },
 ];
 
-export default function TransactionsTable() {
+type Props = {
+  transactionType: TransactionType;
+  // TODO move `Period` type to types.ts
+  currentPeriod: Period;
+};
+
+function buildFilters(transactionType: TransactionType, period: Period) {
+  const month = `${period.month + 1}`.padStart(2, '0');
+  const filter: string[] = [`period=${period.year}-${month}`];
+
+  if (transactionType) {
+    filter.push(`type=${transactionType}`);
+  }
+
+  return `?${filter.join('&')}`;
+}
+
+export default function TransactionsTable({ transactionType, currentPeriod }: Props) {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const { data, error } = useSWR('/api/transactions', fetcher);
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const filter = buildFilters(transactionType, currentPeriod);
+
+  const { data, error } = useSWR(`/api/transactions${filter}`, fetcher);
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
