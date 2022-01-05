@@ -1,3 +1,6 @@
+import * as React from 'react';
+import useSWR from 'swr';
+import format from 'date-fns/format';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -14,11 +17,15 @@ import { blue, green, red } from '@mui/material/colors';
 import ArrowCircleUpIcon from '@mui/icons-material/ArrowCircleUp';
 import ArrowCircleDownIcon from '@mui/icons-material/ArrowCircleDown';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
 
 import { getLayout } from '@/components/layouts/dashboard/Dashboard';
 import MonthSelector from '@/components/MonthSelector';
-import { useTransactions } from '@/context/TransactionContext';
 import Period from '@/types/Period';
+import { Transaction } from '@/types/app';
+import { fetcher, transactionsKey } from '@/utils/helpers';
+import { Alert, Button, LinearProgress, Stack } from '@mui/material';
 
 type PageProps = {
   period: Period;
@@ -121,7 +128,7 @@ export default function DashboardPage({ period, setPeriod }: PageProps) {
         {/* Recent Orders */}
         <Grid item xs={12}>
           <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }} elevation={0}>
-            <LatestTransactionsTable />
+            <LatestTransactionsTable period={period} />
           </Paper>
         </Grid>
       </Grid>
@@ -131,31 +138,79 @@ export default function DashboardPage({ period, setPeriod }: PageProps) {
 
 DashboardPage.getLayout = getLayout;
 
-function LatestTransactionsTable() {
-  const transactions = useTransactions();
+function LatestTransactionsTable({ period }: { period: Period }) {
+  const { data, error } = useSWR<{ transactions: Transaction[] }>(transactionsKey(period), fetcher);
+
+  // TODO list categories and accounts. use some hook to reuse code
+
+  if (!data) {
+    return (
+      <Stack sx={{ width: '100%' }}>
+        <LinearProgress />
+      </Stack>
+    );
+  }
+  if (error) {
+    return (
+      <Stack sx={{ width: '100%' }} spacing={2}>
+        <Alert
+          severity="warning"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                console.log('retry');
+              }}
+            >
+              Retry
+            </Button>
+          }
+        >
+          Failed to load latest transactions
+        </Alert>
+      </Stack>
+    );
+  }
+
+  const { transactions } = data;
+
+  if (!transactions.length) {
+    return (
+      <Stack sx={{ width: '100%' }} spacing={2}>
+        <Alert severity="info">No transactions for the selected period.</Alert>
+      </Stack>
+    );
+  }
 
   return (
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }} aria-label="simple table">
         <TableHead>
           <TableRow>
+            <TableCell>Paid</TableCell>
             <TableCell>Title</TableCell>
             <TableCell align="right">Value</TableCell>
             <TableCell align="right">Type</TableCell>
             <TableCell align="right">Date</TableCell>
-            <TableCell align="right">Paid</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {transactions.slice(0, 5).map((row) => (
-            <TableRow key={row.title} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+          {transactions.slice(0, 10).map((row) => (
+            <TableRow key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+              <TableCell align="left">
+                {row.paid ? (
+                  <CheckCircleOutlineIcon sx={{ color: green[300] }} />
+                ) : (
+                  <ErrorOutlineOutlinedIcon sx={{ color: red[300] }} />
+                )}
+              </TableCell>
               <TableCell component="th" scope="row">
-                {row.title}
+                {row.description}
               </TableCell>
               <TableCell align="right">{row.value}</TableCell>
               <TableCell align="right">{row.type}</TableCell>
-              <TableCell align="right">{row.date}</TableCell>
-              <TableCell align="right">{row.paid}</TableCell>
+              <TableCell align="right">{format(new Date(row.txDate), 'yyyy-MM-dd')}</TableCell>
             </TableRow>
           ))}
         </TableBody>

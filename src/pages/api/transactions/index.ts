@@ -4,18 +4,7 @@ import { Session } from 'next-auth';
 import { getSession } from 'next-auth/react';
 import startOfMonth from 'date-fns/startOfMonth';
 import endOfMonth from 'date-fns/endOfMonth';
-import formatISO from 'date-fns/formatISO';
-import { TransactionType } from '@prisma/client';
-
-type TransactionInput = {
-  value: number;
-  title: string;
-  paid: boolean;
-  txDate: Date;
-  category: string;
-  account: string;
-  type: TransactionType;
-};
+import { Transaction, TransactionType } from '@prisma/client';
 
 // POST /api/post
 // Required fields in body: title
@@ -86,8 +75,8 @@ async function handleGET(req: NextApiRequest, res: NextApiResponse, session: Ses
       updatedAt: true,
       createdAt: true,
       paid: true,
-      category: { select: { id: true, name: true } },
-      TxAccount: { select: { id: true, name: true } },
+      categoryId: true,
+      txAccountId: true,
     },
   });
 
@@ -104,18 +93,18 @@ function getTxType(txType?: string) {
 async function handlePOST(req: NextApiRequest, res: NextApiResponse, session: Session) {
   if (req.method !== 'POST') return false;
 
-  const tx = req.body as TransactionInput;
+  const tx = req.body as Transaction;
 
   const result = await prisma.transaction.create({
     data: {
-      description: tx.title,
+      description: tx.description,
       value: tx.value,
       type: getTxType(tx.type),
       txDate: new Date(tx.txDate),
       paid: tx.paid,
       user: { connect: { email: session.user?.email } },
-      category: { connect: { id: tx.category } },
-      TxAccount: { connect: { id: tx.account } },
+      category: { connect: { id: tx.categoryId } },
+      TxAccount: { connect: { id: tx.txAccountId } },
     },
   });
 

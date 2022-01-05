@@ -24,10 +24,10 @@ import {
 } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/lab';
 import AdapterDateFns from '@mui/lab/AdapterDateFns';
-import { fetcher } from '@/utils/helpers';
+import { fetcher, transactionsKey } from '@/utils/helpers';
 import Period from '@/types/Period';
 import { grey } from '@mui/material/colors';
-import { TransactionType } from '@/types/app';
+import { TransactionType, Category, TxAccount, Transaction } from '@/types/app';
 
 const ModalBox = styled(Box)(({ theme }) => ({
   position: 'absolute',
@@ -39,25 +39,24 @@ const ModalBox = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
 }));
 
-type TransactionInput = {
-  value: number;
-  title: string;
-  paid: boolean;
-  txDate: Date;
-  category: string;
-  account: string;
-  type: TransactionType;
-};
-
 // TODO the add button opens up a menu to select the transaction type. The form
 // then already the tx type set
 
-async function saveTransaction(newTx: TransactionInput) {
+async function saveTransaction(transaction: Transaction) {
   const res = await fetch('/api/transactions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(newTx),
+    body: JSON.stringify(transaction),
   });
+  // const data = await res.json();
+  // return {
+  //   id: data.id as string,
+  //   title: data.description as string,
+  //   value: data.value as number,
+  //   txDate: new Date(data.txDate),
+  //   paid: data.paid as boolean,
+  //   type: data.type,
+  // };
   return res.json();
 }
 
@@ -68,8 +67,8 @@ type Props = {
 
 export default function TransactionForm({ period, transactionType }: Props) {
   const { mutate } = useSWRConfig();
-  const categories = useSWR('/api/categories', fetcher);
-  const txAccounts = useSWR('/api/txaccounts', fetcher);
+  const categories = useSWR<{ categories: Category[] }>('/api/categories', fetcher);
+  const txAccounts = useSWR<{ txAccounts: TxAccount[] }>('/api/txaccounts', fetcher);
 
   // TODO add validations with `yup` or `zod`
 
@@ -80,43 +79,43 @@ export default function TransactionForm({ period, transactionType }: Props) {
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<TransactionInput>({
+  } = useForm<Transaction>({
     defaultValues: {
-      title: '',
+      description: '',
       value: 10,
       paid: false,
       txDate: new Date(),
       // TODO list categories based on the transaction type selected
-      category: '',
-      account: '',
+      categoryId: '',
+      txAccountId: '',
       // NOTE why no error if `type` is missing?
     },
   });
 
-  const onSubmit: SubmitHandler<TransactionInput> = (newTransaction) => {
+  const onSubmit: SubmitHandler<Transaction> = (newTransaction) => {
     // TODO set right type for `transactions`. Currently using `Record<string, any>` to speed up dev
-    const { txDate, type } = newTransaction;
+    const { txDate } = newTransaction;
     const txPeriod = new Period(txDate.getMonth(), txDate.getFullYear());
-    const query = [`period=${txPeriod}`, `type=${type}`].join('&');
 
     // TODO after creating a income the table doesn't refresh. fix this.
 
     // TODO since `api/transactions` comes with a query, build some helper to build this endpoint,
     // or maybe use array [endpoint, period, type] option from swr
     // TODO how to ensure `transactions` is not `undefined` without default `[]`?
+
     mutate(
-      `api/transactions?${query}`,
-      // TODO use right type for transactions. fix this ugliness
-      async ({ transactions }: { transactions: Record<string, any>[] } = { transactions: [] }) => {
-        const createdTx: Record<string, any> = await saveTransaction(newTransaction);
-        // TODO better handle `reset`. state change here is causing memory leak warning?
+      transactionsKey(txPeriod),
+      async ({ transactions }: { transactions: Transaction[] } = { transactions: [] }) => {
+        // TODO return `Transaction` from save...
+        const savedTx = (await saveTransaction(newTransaction)) as Record<string, unknown>;
         handleClose();
-        return { transactions: [...transactions, createdTx] };
+        return { transactions: [...transactions, savedTx] };
       },
     );
   };
 
   const handleOpen = () => setOpen(true);
+
   const handleClose = () => {
     setOpen(false);
     reset();
@@ -206,7 +205,7 @@ export default function TransactionForm({ period, transactionType }: Props) {
               )}
             />
 
-            <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.title}>
+            <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.description}>
               <InputLabel htmlFor="standard-adornment-amount">Description</InputLabel>
               <Input
                 id="tx-title"
@@ -215,17 +214,17 @@ export default function TransactionForm({ period, transactionType }: Props) {
                     <ArticleIcon />
                   </InputAdornment>
                 }
-                {...register('title', { required: true })}
+                {...register('description', { required: true })}
               />
-              {errors.title && <FormHelperText>Title cannot be empty</FormHelperText>}
+              {errors.description && <FormHelperText>Title cannot be empty</FormHelperText>}
             </FormControl>
 
             <Controller
               control={control}
-              name="category"
+              name="categoryId"
               rules={{ required: true }}
               render={({ field }) => (
-                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.category}>
+                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.categoryId}>
                   <InputLabel id="tx-category-lb">Category</InputLabel>
                   <Select
                     id="tx-category"
@@ -243,24 +242,23 @@ export default function TransactionForm({ period, transactionType }: Props) {
                         None
                       </Typography>
                     </MenuItem>
-                    {/* TODO set type for category to remove `Record` and `as string` */}
-                    {(categories.data.categories as Record<string, unknown>[]).map((item) => (
-                      <MenuItem key={item.id as string} value={item.id as string}>
+                    {categories.data.categories.map((item) => (
+                      <MenuItem key={item.id} value={item.id}>
                         {item.name}
                       </MenuItem>
                     ))}
                   </Select>
-                  {errors.category && <FormHelperText>Select a valid category</FormHelperText>}
+                  {errors.categoryId && <FormHelperText>Select a valid category</FormHelperText>}
                 </FormControl>
               )}
             />
 
             <Controller
               control={control}
-              name="account"
+              name="txAccountId"
               rules={{ required: true }}
               render={({ field }) => (
-                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.account}>
+                <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.txAccountId}>
                   <InputLabel id="tx-account-lb">Account</InputLabel>
                   <Select
                     id="tx-account"
@@ -278,14 +276,13 @@ export default function TransactionForm({ period, transactionType }: Props) {
                         None
                       </Typography>
                     </MenuItem>
-                    {/* TODO set type for txAccount to remove `Record` and `as string` */}
-                    {(txAccounts.data.txAccounts as Record<string, unknown>[]).map((item) => (
-                      <MenuItem key={item.id as string} value={item.id as string}>
+                    {txAccounts.data.txAccounts.map((item) => (
+                      <MenuItem key={item.id} value={item.id}>
                         {item.name}
                       </MenuItem>
                     ))}
                   </Select>
-                  {errors.account && <FormHelperText>Select a valid account</FormHelperText>}
+                  {errors.txAccountId && <FormHelperText>Select a valid account</FormHelperText>}
                 </FormControl>
               )}
             />

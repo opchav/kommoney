@@ -1,3 +1,5 @@
+import Period from '@/types/Period';
+
 export const MONTHS: Array<Array<string>> = [
   ['January', 'Jan'],
   ['February', 'Feb'],
@@ -36,18 +38,18 @@ export function randomId() {
 }
 
 // TODO promote this to a class and add `publid toString = () : string => {}`
-export type Period = {
-  month: number;
-  year: number;
-};
+// export type Period = {
+//   month: number;
+//   year: number;
+// };
 
-export function getPeriod(): Period {
-  const dt = new Date();
-  return {
-    month: dt.getMonth(),
-    year: dt.getFullYear(),
-  };
-}
+// export function getPeriod(): Period {
+//   const dt = new Date();
+//   return {
+//     month: dt.getMonth(),
+//     year: dt.getFullYear(),
+//   };
+// }
 
 // export const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -60,3 +62,5 @@ export const fetcher = async (url: string) => {
   }
   return data;
 };
+
+export const transactionsKey = (period: Period) => `api/transactions?period=${period}`;

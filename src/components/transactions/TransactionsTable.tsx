@@ -1,5 +1,6 @@
 import * as React from 'react';
 import useSWR from 'swr';
+import format from 'date-fns/format';
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -16,11 +17,10 @@ import Tooltip from '@mui/material/Tooltip';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
-import { LinearProgress } from '@mui/material';
+import { Alert, LinearProgress, Stack } from '@mui/material';
 import { green, red } from '@mui/material/colors';
-import { TransactionType } from '@/types/app';
-import { Transaction } from '@/types/transaction';
-import { fetcher } from '@/utils/helpers';
+import { TransactionType, Transaction, Category, TxAccount } from '@/types/app';
+import { fetcher, transactionsKey } from '@/utils/helpers';
 import Period from '@/types/Period';
 
 interface HeadCell {
@@ -32,12 +32,12 @@ interface HeadCell {
 
 const headCells: readonly HeadCell[] = [
   { id: 'paid', numeric: false, disablePadding: false, label: 'Paid' },
-  { id: 'title', numeric: false, disablePadding: true, label: 'Title' },
+  { id: 'description', numeric: false, disablePadding: true, label: 'Title' },
   { id: 'value', numeric: true, disablePadding: false, label: 'Value' },
   { id: 'type', numeric: false, disablePadding: false, label: 'Type' },
-  { id: 'date', numeric: true, disablePadding: false, label: 'Date' },
-  { id: 'category', numeric: true, disablePadding: false, label: 'Category' },
-  { id: 'account', numeric: true, disablePadding: false, label: 'Account' },
+  { id: 'txDate', numeric: true, disablePadding: false, label: 'Date' },
+  { id: 'categoryId', numeric: true, disablePadding: false, label: 'Category' },
+  { id: 'txAccountId', numeric: true, disablePadding: false, label: 'Account' },
   { id: 'note', numeric: false, disablePadding: false, label: 'Note' },
 ];
 
@@ -46,23 +46,25 @@ type PageProps = {
   period: Period;
 };
 
-function buildFilters(transactionType: TransactionType, period: Period) {
-  const filter = [`period=${period}`];
+const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
-  if (transactionType) {
-    filter.push(`type=${transactionType}`);
-  }
-
-  return `?${filter.join('&')}`;
+// TODO move to some helper/class
+function findCategory(id: string, list: Category[]) {
+  return list.find((item) => item.id === id);
 }
 
-export default function TransactionsTable({ transactionType, period }: PageProps) {
+function findTxAccount(id: string, list: TxAccount[]) {
+  return list.find((item) => item.id === id);
+}
+
+export default function TransactionsTable({ period }: PageProps) {
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [rowsPerPage, setRowsPerPage] = React.useState(PER_PAGE_OPTIONS[0]);
 
-  const filter = buildFilters(transactionType, period);
-
-  const { data, error } = useSWR(`/api/transactions${filter}`, fetcher);
+  // TODO maybe write a hook for each resource: `useTransactions(period), useCategories(), useTxAccounts()`
+  const { data, error } = useSWR<{ transactions: Transaction[] }>(transactionsKey(period), fetcher);
+  const categories = useSWR<{ categories: Category[] }>('/api/categories', fetcher);
+  const txAccounts = useSWR<{ txAccounts: TxAccount[] }>('/api/txaccounts', fetcher);
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -76,6 +78,30 @@ export default function TransactionsTable({ transactionType, period }: PageProps
   // Avoid a layout jump when reaching the last page with empty rows.
   // const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - transactions.length) : 0;
   const emptyRows = 0;
+
+  if (!data || !data.transactions.length) {
+    return (
+      <Box sx={{ width: '100%' }}>
+        <Paper sx={{ width: '100%', mb: 2 }}>
+          <Toolbar
+            sx={{
+              pl: { sm: 2 },
+              pr: { xs: 1, sm: 1 },
+              display: 'flex',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Typography variant="h6" id="tableTitle" component="div">
+              Transactions
+            </Typography>
+          </Toolbar>
+          <Box sx={{ width: '100%', p: 2 }}>
+            <Alert severity="info">No transactions for the selected period.</Alert>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -103,7 +129,7 @@ export default function TransactionsTable({ transactionType, period }: PageProps
             <LinearProgress />
           </Box>
         )}
-        {data && (
+        {data && categories.data && txAccounts.data && (
           <>
             <TableContainer>
               <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle" size="medium">
@@ -117,7 +143,7 @@ export default function TransactionsTable({ transactionType, period }: PageProps
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {(data.transactions as Record<string, any>[])
+                  {data.transactions
                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                     .map((row, index) => (
                       <TableRow hover tabIndex={-1} key={row.id}>
@@ -133,9 +159,15 @@ export default function TransactionsTable({ transactionType, period }: PageProps
                         </TableCell>
                         <TableCell align="right">{row.value}</TableCell>
                         <TableCell align="right">{row.type}</TableCell>
-                        <TableCell align="right">{new Date(row.txDate).toLocaleString()}</TableCell>
-                        <TableCell align="right">{row.category?.name}</TableCell>
-                        <TableCell align="right">{row.TxAccount?.name}</TableCell>
+                        <TableCell align="right">
+                          {format(new Date(row.txDate), 'yyyy-MM-dd')}
+                        </TableCell>
+                        <TableCell align="right">
+                          {findCategory(row.categoryId, categories.data.categories)?.name}
+                        </TableCell>
+                        <TableCell align="right">
+                          {findTxAccount(row.txAccountId, txAccounts.data.txAccounts)?.name}
+                        </TableCell>
                         <TableCell align="right">{row.note}</TableCell>
                       </TableRow>
                     ))}
@@ -148,7 +180,7 @@ export default function TransactionsTable({ transactionType, period }: PageProps
               </Table>
             </TableContainer>
             <TablePagination
-              rowsPerPageOptions={[10, 25, 50]}
+              rowsPerPageOptions={PER_PAGE_OPTIONS}
               component="div"
               count={data.transactions.length}
               rowsPerPage={rowsPerPage}

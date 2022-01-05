@@ -3,7 +3,7 @@ export interface Transaction {
   title: string;
   value: number;
   type: TransactionType;
-  date: number;
+  txDate: number;
   paid: number;
   category: string;
   account: string;
