@@ -21,7 +21,7 @@ const About: NextPage = () => {
         }}
       >
         <Typography variant="h4" component="h1" gutterBottom>
-          MUI v5 + Next.js with TypeScript example
+          This is the KonMoney Web App
         </Typography>
         <Box maxWidth="sm">
           <Button variant="contained" component={Link} noLinkStyle href="/">
