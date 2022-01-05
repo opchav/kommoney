@@ -15,10 +15,14 @@
     "jsx": "preserve",
     "jsxImportSource": "@emotion/react",
     "incremental": true,
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["*"]
-    }
+      "@/*": ["src/*"]
+    },
+    "types": [
+      "@types/jest",
+      "@testing-library/jest-dom"
+    ]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"],

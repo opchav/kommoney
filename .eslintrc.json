@@ -1,6 +1,13 @@
 {
-  "env": {
-    "browser": true
-  },
-  "extends": "next"
+  "root": true,
+  "extends": ["next/core-web-vitals"],
+  "plugins": ["testing-library"],
+  "env": { "browser": true },
+  "overrides": [
+    // Only uses Testing Library lint rules in test files
+    {
+      "files": ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)"],
+      "extends": ["plugin:testing-library/react"]
+    }
+  ]
 }
