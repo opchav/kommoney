@@ -28,6 +28,7 @@ import { fetcher, transactionsKey } from '@/utils/helpers';
 import Period from '@/types/Period';
 import { grey } from '@mui/material/colors';
 import { TransactionType, Category, TxAccount, Transaction } from '@/types/app';
+import NewTransactionMenu from './transactions/NewTransactionMenu';
 
 const ModalBox = styled(Box)(({ theme }) => ({
   position: 'absolute',
@@ -42,22 +43,15 @@ const ModalBox = styled(Box)(({ theme }) => ({
 // TODO the add button opens up a menu to select the transaction type. The form
 // then already the tx type set
 
-async function saveTransaction(transaction: Transaction) {
+async function saveTransaction(newTransaction: Transaction) {
   const res = await fetch('/api/transactions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(transaction),
+    body: JSON.stringify(newTransaction),
   });
-  // const data = await res.json();
-  // return {
-  //   id: data.id as string,
-  //   title: data.description as string,
-  //   value: data.value as number,
-  //   txDate: new Date(data.txDate),
-  //   paid: data.paid as boolean,
-  //   type: data.type,
-  // };
-  return res.json();
+  // NOTE is this style `as` ok?
+  const { transaction } = (await res.json()) as { transaction: Transaction };
+  return transaction;
 }
 
 type Props = {
@@ -65,14 +59,19 @@ type Props = {
   transactionType: TransactionType;
 };
 
+type TransactionMutate = {
+  transactions: Transaction[];
+};
+
 export default function TransactionForm({ period, transactionType }: Props) {
+  const [formTransactionType, setFormTransactionType] = React.useState(transactionType);
+
   const { mutate } = useSWRConfig();
   const categories = useSWR<{ categories: Category[] }>('/api/categories', fetcher);
   const txAccounts = useSWR<{ txAccounts: TxAccount[] }>('/api/txaccounts', fetcher);
 
   // TODO add validations with `yup` or `zod`
 
-  const [open, setOpen] = React.useState(false);
   const {
     control,
     register,
@@ -93,51 +92,40 @@ export default function TransactionForm({ period, transactionType }: Props) {
   });
 
   const onSubmit: SubmitHandler<Transaction> = (newTransaction) => {
-    // TODO set right type for `transactions`. Currently using `Record<string, any>` to speed up dev
     const { txDate } = newTransaction;
     const txPeriod = new Period(txDate.getMonth(), txDate.getFullYear());
 
-    // TODO after creating a income the table doesn't refresh. fix this.
-
-    // TODO since `api/transactions` comes with a query, build some helper to build this endpoint,
-    // or maybe use array [endpoint, period, type] option from swr
-    // TODO how to ensure `transactions` is not `undefined` without default `[]`?
-
-    mutate(
-      transactionsKey(txPeriod),
-      async ({ transactions }: { transactions: Transaction[] } = { transactions: [] }) => {
-        // TODO return `Transaction` from save...
-        const savedTx = (await saveTransaction(newTransaction)) as Record<string, unknown>;
-        handleClose();
-        return { transactions: [...transactions, savedTx] };
-      },
-    );
+    mutate<TransactionMutate>(transactionsKey(txPeriod), async (data) => {
+      // TODO why sometimes data is undefined?
+      // -- 1. when adding 1st transacton of a period
+      const list = data?.transactions ?? [];
+      const savedTransaction = await saveTransaction(newTransaction);
+      handleClose();
+      return { transactions: [...list, savedTransaction] };
+    });
   };
 
-  const handleOpen = () => setOpen(true);
-
   const handleClose = () => {
-    setOpen(false);
+    setFormTransactionType(null);
     reset();
   };
 
-  // TODO add field to allow the user change the type when form is open
-
-  if (!categories.data || !txAccounts.data) {
+  if (!formTransactionType || !categories.data || !txAccounts.data) {
     return (
       <>
-        <Button variant="contained" color="primary" onClick={handleOpen}>
-          Add
-        </Button>
+        <NewTransactionMenu
+          transactionType={transactionType}
+          setTransactionType={setFormTransactionType}
+        />
         <Modal
-          open={open}
+          open={!!formTransactionType}
           onClose={handleClose}
           aria-labelledby="modal-modal-title"
           aria-describedby="modal-modal-description"
         >
           <ModalBox>
             <Typography component="h1" variant="h5">
-              New {transactionType.toLowerCase()}
+              New
             </Typography>
             <Stack>
               <LinearProgress />
@@ -150,22 +138,23 @@ export default function TransactionForm({ period, transactionType }: Props) {
 
   return (
     <>
-      <Button variant="contained" color="primary" onClick={handleOpen}>
-        Add
-      </Button>
+      <NewTransactionMenu
+        transactionType={transactionType}
+        setTransactionType={setFormTransactionType}
+      />
       <Modal
-        open={open}
+        open={!!formTransactionType}
         onClose={handleClose}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
         <ModalBox>
           <Typography component="h1" variant="h5">
-            New {transactionType.toLowerCase()}
+            New {formTransactionType.toLowerCase()}
           </Typography>
           <Stack component="form" onSubmit={handleSubmit(onSubmit)}>
             {/* override type `value` here cuz values was always the default one from 1st render EXPENSE */}
-            <input type="hidden" {...register('type', { value: transactionType })} />
+            <input type="hidden" {...register('type', { value: formTransactionType })} />
             <Stack direction="row" alignItems="flex-end">
               <FormControl fullWidth sx={{ m: 1 }} variant="standard">
                 <InputLabel htmlFor="standard-adornment-amount">Value</InputLabel>

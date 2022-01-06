@@ -9,7 +9,7 @@ import TransactionTypeMenu from '@/components/transactions/TransactionTypeMenu';
 
 import { getLayout } from '@/components/layouts/dashboard/Dashboard';
 import InputSearch from '@/components/InputSearch';
-import { TransactionType, transactionTypes } from '@/types/app';
+import { TransactionType } from '@/types/app';
 import Period from '@/types/Period';
 
 type PageProps = {
@@ -31,10 +31,7 @@ export default function TransactionsPage({ period, setPeriod }: PageProps) {
           <MonthSelector period={period} setPeriod={setPeriod} />
           <Box sx={{ flexGrow: 1 }}></Box>
           <InputSearch />
-          <TransactionForm
-            period={period}
-            transactionType={transactionType || transactionTypes.EXPENSE}
-          />
+          <TransactionForm period={period} transactionType={transactionType} />
         </Box>
       </Grid>
       <Grid item xs={12}>
