@@ -67,8 +67,18 @@ export default function TransactionForm({ period, transactionType }: Props) {
   const [formTransactionType, setFormTransactionType] = React.useState(transactionType);
 
   const { mutate } = useSWRConfig();
-  const categories = useSWR<{ categories: Category[] }>('/api/categories', fetcher);
-  const txAccounts = useSWR<{ txAccounts: TxAccount[] }>('/api/txaccounts', fetcher);
+  // TODO better think on this strategy later
+  // Since categories and txAccounts don't get updated frequently no need to fetch
+  // when the component is mounted or focusing that screen. This way it only
+  // refetch when opening the page
+  const categories = useSWR<{ categories: Category[] }>('/api/categories', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnMount: false,
+  });
+  const txAccounts = useSWR<{ txAccounts: TxAccount[] }>('/api/txaccounts', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnMount: false,
+  });
 
   // TODO add validations with `yup` or `zod`
 
