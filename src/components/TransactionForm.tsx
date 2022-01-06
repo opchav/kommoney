@@ -81,13 +81,9 @@ export default function TransactionForm({ period, transactionType }: Props) {
   } = useForm<Transaction>({
     defaultValues: {
       description: '',
-      value: 10,
+      value: 0,
       paid: false,
       txDate: new Date(),
-      // TODO list categories based on the transaction type selected
-      categoryId: '',
-      txAccountId: '',
-      // NOTE why no error if `type` is missing?
     },
   });
 
@@ -135,6 +131,16 @@ export default function TransactionForm({ period, transactionType }: Props) {
       </>
     );
   }
+
+  // TODO refactor to a function
+  const categoriesList = categories.data.categories.filter(
+    (item) => item.type === formTransactionType,
+  );
+  const defaultCategoryId = categoriesList[0].id;
+  const defaultTxAccountId = (
+    txAccounts.data.txAccounts.find((item) => /checking/i.test(item.name)) ||
+    txAccounts.data.txAccounts[0]
+  ).id;
 
   return (
     <>
@@ -212,6 +218,7 @@ export default function TransactionForm({ period, transactionType }: Props) {
               control={control}
               name="categoryId"
               rules={{ required: true }}
+              defaultValue={defaultCategoryId}
               render={({ field }) => (
                 <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.categoryId}>
                   <InputLabel id="tx-category-lb">Category</InputLabel>
@@ -219,6 +226,7 @@ export default function TransactionForm({ period, transactionType }: Props) {
                     id="tx-category"
                     labelId="tx-category-lb"
                     label="Category"
+                    defaultValue={defaultCategoryId}
                     {...field}
                     startAdornment={
                       <InputAdornment position="start">
@@ -231,7 +239,7 @@ export default function TransactionForm({ period, transactionType }: Props) {
                         None
                       </Typography>
                     </MenuItem>
-                    {categories.data.categories.map((item) => (
+                    {categoriesList.map((item) => (
                       <MenuItem key={item.id} value={item.id}>
                         {item.name}
                       </MenuItem>
@@ -246,6 +254,7 @@ export default function TransactionForm({ period, transactionType }: Props) {
               control={control}
               name="txAccountId"
               rules={{ required: true }}
+              defaultValue={defaultTxAccountId}
               render={({ field }) => (
                 <FormControl sx={{ m: 1 }} variant="standard" error={!!errors.txAccountId}>
                   <InputLabel id="tx-account-lb">Account</InputLabel>
@@ -253,6 +262,7 @@ export default function TransactionForm({ period, transactionType }: Props) {
                     id="tx-account"
                     labelId="tx-account-lb"
                     label="Account"
+                    defaultValue={defaultTxAccountId}
                     {...field}
                     startAdornment={
                       <InputAdornment position="start">
