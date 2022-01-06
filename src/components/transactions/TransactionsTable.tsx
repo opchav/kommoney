@@ -59,7 +59,7 @@ function findTxAccount(id: string, list: TxAccount[]) {
 
 export default function TransactionsTable({ period }: PageProps) {
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(PER_PAGE_OPTIONS[0]);
+  const [rowsPerPage, setRowsPerPage] = React.useState(PER_PAGE_OPTIONS[1]);
 
   // TODO maybe write a hook for each resource: `useTransactions(period), useCategories(), useTxAccounts()`
   const { data, error } = useSWR<{ transactions: Transaction[] }>(transactionsKey(period), fetcher);
