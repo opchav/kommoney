@@ -1,5 +1,5 @@
 import * as React from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import format from 'date-fns/format';
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
@@ -17,8 +17,10 @@ import Tooltip from '@mui/material/Tooltip';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
-import { Alert, LinearProgress, Stack } from '@mui/material';
-import { green, red } from '@mui/material/colors';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { Alert, Button, LinearProgress, Popover } from '@mui/material';
+import { green, grey, red } from '@mui/material/colors';
 import { TransactionType, Transaction, Category, TxAccount } from '@/types/app';
 import { fetcher, transactionsKey } from '@/utils/helpers';
 import Period from '@/types/Period';
@@ -57,14 +59,33 @@ function findTxAccount(id: string, list: TxAccount[]) {
   return list.find((item) => item.id === id);
 }
 
+// TODO handle error try...catch?
+async function deleteTransaction(transaction: Transaction) {
+  return fetch(`/api/transactions/${transaction.id}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+}
+
+type TransactionMutate = {
+  transactions: Transaction[];
+};
+
+// TODO ensure when clicking delete icon only that row is rerenders. Currently the whole table rerenders.
+// -- But rerendering the whole table which hardly contains over 50 rows is even a thing to worry about?
+
 export default function TransactionsTable({ period }: PageProps) {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(PER_PAGE_OPTIONS[1]);
+  const [deleteTx, setDeleteTx] = React.useState<Transaction | null>(null);
+  const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
 
   // TODO maybe write a hook for each resource: `useTransactions(period), useCategories(), useTxAccounts()`
   const { data, error } = useSWR<{ transactions: Transaction[] }>(transactionsKey(period), fetcher);
   const categories = useSWR<{ categories: Category[] }>('/api/categories', fetcher);
   const txAccounts = useSWR<{ txAccounts: TxAccount[] }>('/api/txaccounts', fetcher);
+  const { mutate } = useSWRConfig();
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -73,6 +94,42 @@ export default function TransactionsTable({ period }: PageProps) {
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const handleEdit = (transaction: Transaction) => {
+    console.log('edit', transaction);
+  };
+
+  const handleDelete =
+    (transaction: Transaction) => (event: React.MouseEvent<HTMLButtonElement>) => {
+      console.log('delete', transaction);
+      console.log('....', event);
+      setDeleteTx(transaction);
+      setAnchorEl(event.currentTarget);
+    };
+
+  const handleClose = () => {
+    // NOTE 2 set state calls cause 2 rerenders???
+    setDeleteTx(null);
+    setAnchorEl(null);
+  };
+
+  const handleDeleteConfirm = () => {
+    console.log('deleting...', deleteTx.id);
+    // TODO ensure transaction date is already a Date type before here (when fetching?)
+    const date = new Date(deleteTx.txDate);
+    const txPeriod = new Period(date.getMonth(), date.getFullYear());
+
+    mutate<TransactionMutate>(transactionsKey(txPeriod), async (data) => {
+      const list = data?.transactions ?? [];
+      // TODO error handling?
+      await deleteTransaction(deleteTx);
+      const newList = list.filter((tx) => tx.id !== deleteTx.id);
+      handleClose();
+      console.log(`Transaction ${deleteTx.id} deleted`, deleteTx);
+      console.log('New list', newList);
+      return { transactions: newList };
+    });
   };
 
   // Avoid a layout jump when reaching the last page with empty rows.
@@ -140,6 +197,7 @@ export default function TransactionsTable({ period }: PageProps) {
                         {headCell.label}
                       </TableCell>
                     ))}
+                    <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -169,6 +227,44 @@ export default function TransactionsTable({ period }: PageProps) {
                           {findTxAccount(row.txAccountId, txAccounts.data.txAccounts)?.name}
                         </TableCell>
                         <TableCell align="right">{row.note}</TableCell>
+                        <TableCell align="right">
+                          <IconButton onClick={() => handleEdit(row)}>
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            onClick={handleDelete(row)}
+                            aria-labelledby={
+                              !!deleteTx && deleteTx.id === row.id ? `tx-del-${row.id}` : undefined
+                            }
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                          <Popover
+                            id={deleteTx?.id === row.id ? `tx-del-${row.id}` : undefined}
+                            open={deleteTx?.id === row.id}
+                            anchorEl={deleteTx?.id === row.id ? anchorEl : null}
+                            onClose={handleClose}
+                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                          >
+                            <Paper sx={{ width: 'auto', py: 1, px: 2 }}>
+                              <Button
+                                variant="text"
+                                onClick={handleClose}
+                                sx={{ color: grey[500] }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                variant="contained"
+                                sx={{ backgroundColor: red[500], ml: 2 }}
+                                onClick={handleDeleteConfirm}
+                              >
+                                Delete
+                              </Button>
+                            </Paper>
+                          </Popover>
+                        </TableCell>
                       </TableRow>
                     ))}
                   {emptyRows > 0 && (
