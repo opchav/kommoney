@@ -26,8 +26,8 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
       if (!transaction) {
         return res.status(404).json({ message: '404 - Not Found' });
       }
-      // await prisma.transaction.delete({ where: { id: transaction.id } });
-      return res.status(204).json({ message: 'ok' });
+      await prisma.transaction.delete({ where: { id: transaction.id } });
+      return res.status(204).send('');
     }
 
     return res.status(405).json({ message: '405 - Method Not Allowed' });
