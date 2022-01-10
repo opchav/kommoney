@@ -19,6 +19,7 @@ type PageProps = {
 
 export default function TransactionsPage({ period, setPeriod }: PageProps) {
   const [transactionType, setTransactionType] = React.useState<TransactionType | null>();
+  const [search, setSearch] = React.useState<string>('')
 
   return (
     <Grid container spacing={3} sx={{ pb: 3 }}>
@@ -30,12 +31,12 @@ export default function TransactionsPage({ period, setPeriod }: PageProps) {
           />
           <MonthSelector period={period} setPeriod={setPeriod} />
           <Box sx={{ flexGrow: 1 }}></Box>
-          <InputSearch />
+          <InputSearch search={search} setSearch={setSearch} />
           <TransactionForm period={period} transactionType={transactionType} />
         </Box>
       </Grid>
       <Grid item xs={12}>
-        <TransactionsTable transactionType={transactionType} period={period} />
+        <TransactionsTable transactionType={transactionType} period={period} search={search} />
       </Grid>
     </Grid>
   );

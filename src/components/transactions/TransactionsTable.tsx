@@ -43,10 +43,6 @@ const headCells: readonly HeadCell[] = [
   { id: 'note', numeric: false, disablePadding: false, label: 'Note' },
 ];
 
-type PageProps = {
-  transactionType: TransactionType;
-  period: Period;
-};
 
 const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
@@ -68,6 +64,12 @@ async function deleteTransaction(transaction: Transaction) {
   });
 }
 
+type PageProps = {
+  transactionType: TransactionType;
+  period: Period;
+  search: string;
+};
+
 type TransactionMutate = {
   transactions: Transaction[];
 };
@@ -75,7 +77,7 @@ type TransactionMutate = {
 // TODO ensure when clicking delete icon only that row is rerenders. Currently the whole table rerenders.
 // -- But rerendering the whole table which hardly contains over 50 rows is even a thing to worry about?
 
-export default function TransactionsTable({ period, transactionType }: PageProps) {
+export default function TransactionsTable({ period, transactionType, search }: PageProps) {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(PER_PAGE_OPTIONS[1]);
   const [deleteTx, setDeleteTx] = React.useState<Transaction | null>(null);
@@ -161,9 +163,11 @@ export default function TransactionsTable({ period, transactionType }: PageProps
   }
 
   const listTransactions = data.transactions.filter((tx) => {
-    if (!transactionType) return true;
-    return transactionType === tx.type
-  });
+    return !transactionType || transactionType === tx.type;
+  }).filter((tx) => {
+    return tx.description.toLowerCase().includes(search?.toLowerCase())
+  })
+
 
   return (
     <Box sx={{ width: '100%' }}>
