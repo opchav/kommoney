@@ -4,14 +4,9 @@ import { Session } from 'next-auth';
 import { getSession } from 'next-auth/react';
 import startOfMonth from 'date-fns/startOfMonth';
 import endOfMonth from 'date-fns/endOfMonth';
-import { Transaction, TransactionType } from '@prisma/client';
+import { Prisma, Transaction, TransactionType } from '@prisma/client';
 
-// POST /api/post
-// Required fields in body: title
-// Optional fields in body: content
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
-  // const { title, content } = req.body;
-
   const session = await getSession({ req });
 
   if (!session) {
@@ -19,12 +14,12 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
   }
 
   if (req.method === 'POST') {
-    return handlePOST(req, res, session);
+    return createTransaction(req, res, session);
   } else if (req.method === 'GET') {
     return handleGET(req, res, session);
   }
 
-  return res.json({ method: req.method });
+  return res.status(415).json({ message: 'Unsupported Media Type' })
 }
 
 type TransactionQuery = {
@@ -90,23 +85,51 @@ function getTxType(txType?: string) {
   return;
 }
 
-async function handlePOST(req: NextApiRequest, res: NextApiResponse, session: Session) {
+async function createTransaction(req: NextApiRequest, res: NextApiResponse, session: Session) {
   if (req.method !== 'POST') return false;
 
-  const tx = req.body as Transaction;
+  try {
+    const tx = req.body as Transaction;
 
-  const result = await prisma.transaction.create({
-    data: {
-      description: tx.description,
-      value: tx.value,
-      type: getTxType(tx.type),
-      txDate: new Date(tx.txDate),
-      paid: tx.paid,
-      user: { connect: { email: session.user?.email } },
-      category: { connect: { id: tx.categoryId } },
-      TxAccount: { connect: { id: tx.txAccountId } },
-    },
-  });
+    const transaction = await prisma.$transaction(async (prisma) => {
+      const txValue = new Prisma.Decimal(tx.value)
 
-  return res.json({ transaction: result });
+      const transaction = await prisma.transaction.create({
+        data: {
+          description: tx.description,
+          value: txValue,
+          type: getTxType(tx.type),
+          txDate: new Date(tx.txDate),
+          paid: tx.paid,
+          user: { connect: { email: session.user?.email } },
+          category: { connect: { id: tx.categoryId } },
+          TxAccount: { connect: { id: tx.txAccountId } },
+        }
+      })
+
+      const account = await prisma.txAccount.findUnique({ where: { id: tx.txAccountId } })
+
+      let newBalance = account.balance;
+      // TODO handle transfers;
+      if (!!tx.paid) {
+        if (tx.type === TransactionType.EXPENSE) {
+          newBalance = account.balance.sub(txValue);
+        } else if (tx.type === TransactionType.INCOME) {
+          newBalance = account.balance.add(txValue)
+        }
+      }
+
+      await prisma.txAccount.update({
+        where: { id: account.id },
+        data: { balance: newBalance }
+      })
+
+      return transaction
+    })
+
+    return res.json({ transaction });
+  } catch (err) {
+    console.error('ERROR', err);
+    res.status(400).json({ message: `Faild to create transaction` })
+  }
 }
