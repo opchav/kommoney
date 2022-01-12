@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '@/utils/prisma';
 import { Session } from 'next-auth';
 import { getSession } from 'next-auth/react';
+import { TransactionType } from '@prisma/client';
 
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
   const id = req.query.id as string;
@@ -26,7 +27,28 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
       if (!transaction) {
         return res.status(404).json({ message: '404 - Not Found' });
       }
-      await prisma.transaction.delete({ where: { id: transaction.id } });
+
+      await prisma.$transaction(async (prisma) => {
+
+        const account = await prisma.txAccount.findUnique({ where: { id: transaction.txAccountId } })
+
+        let balance = account.balance
+        if (transaction.paid) {
+          if (transaction.type === TransactionType.INCOME) {
+            balance = balance.sub(transaction.value)
+          } else if (transaction.type === TransactionType.EXPENSE) {
+            balance = balance.add(transaction.value);
+          }
+        }
+
+        await prisma.txAccount.update({
+          where: { id: account.id },
+          data: { balance }
+        })
+
+        await prisma.transaction.delete({ where: { id: transaction.id } });
+      })
+
       return res.status(204).send('');
     }
 

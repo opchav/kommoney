@@ -109,19 +109,19 @@ async function createTransaction(req: NextApiRequest, res: NextApiResponse, sess
 
       const account = await prisma.txAccount.findUnique({ where: { id: tx.txAccountId } })
 
-      let newBalance = account.balance;
+      let balance = account.balance;
       // TODO handle transfers;
       if (!!tx.paid) {
         if (tx.type === TransactionType.EXPENSE) {
-          newBalance = account.balance.sub(txValue);
+          balance = account.balance.sub(txValue);
         } else if (tx.type === TransactionType.INCOME) {
-          newBalance = account.balance.add(txValue)
+          balance = account.balance.add(txValue)
         }
       }
 
       await prisma.txAccount.update({
         where: { id: account.id },
-        data: { balance: newBalance }
+        data: { balance }
       })
 
       return transaction
